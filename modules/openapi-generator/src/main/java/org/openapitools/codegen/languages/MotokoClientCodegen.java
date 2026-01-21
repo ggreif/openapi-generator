@@ -16,10 +16,12 @@ import org.slf4j.LoggerFactory;
 
 public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig {
     public static final String PROJECT_NAME = "projectName";
+    public static final String USE_DFX = "useDfx";
 
     private final Logger LOGGER = LoggerFactory.getLogger(MotokoClientCodegen.class);
 
     protected String projectName = "OpenAPI";
+    protected boolean useDfx = false;
 
     public CodegenType getTag() {
         return CodegenType.CLIENT;
@@ -68,6 +70,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         typeMapping.put("object", "Any");
 
         cliOptions.add(CliOption.newString(PROJECT_NAME, "Project name for generated code"));
+        cliOptions.add(CliOption.newBoolean(USE_DFX, "Generate code for dfx with ic:aaaaa-aa imports", useDfx));
     }
 
     @Override
@@ -77,6 +80,11 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         if (additionalProperties.containsKey(PROJECT_NAME)) {
             setProjectName((String) additionalProperties.get(PROJECT_NAME));
         }
+
+        if (additionalProperties.containsKey(USE_DFX)) {
+            setUseDfx(convertPropertyToBooleanAndWriteBack(USE_DFX));
+        }
+        additionalProperties.put(USE_DFX, useDfx);
     }
 
     public void setProjectName(String projectName) {
@@ -85,5 +93,13 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
     public String getProjectName() {
         return projectName;
+    }
+
+    public void setUseDfx(boolean useDfx) {
+        this.useDfx = useDfx;
+    }
+
+    public boolean getUseDfx() {
+        return useDfx;
     }
 }

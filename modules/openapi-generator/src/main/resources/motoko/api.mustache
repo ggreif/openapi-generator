@@ -3,9 +3,49 @@
 /// {{{description}}}
 {{/description}}
 
+{{#useDfx}}
 import IC "mo:core/InternetComputer";
-import { type HttpRequest; type HttpResponse; type HttpMethod; type HttpHeader } "mo:core/InternetComputer";
+import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 import Text "mo:core/Text";
+{{/useDfx}}
+{{^useDfx}}
+import IC "mo:core/InternetComputer";
+import Text "mo:core/Text";
+
+// Management Canister interface for HTTP outcalls
+type HttpHeader = {
+    name : Text;
+    value : Text;
+};
+
+type HttpMethod = {
+    #get;
+    #head;
+    #post;
+};
+
+type CanisterHttpRequestArgument = {
+    url : Text;
+    max_response_bytes : ?Nat64;
+    headers : [HttpHeader];
+    body : ?Blob;
+    method : HttpMethod;
+    transform : ?{
+        function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+        context : Blob;
+    };
+};
+
+type CanisterHttpResponsePayload = {
+    status : Nat;
+    headers : [HttpHeader];
+    body : Blob;
+};
+
+let managementCanister = actor "aaaaa-aa" : actor {
+    http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload;
+};
+{{/useDfx}}
 
 module {
 {{#operations}}
@@ -19,18 +59,40 @@ module {
     public func {{operationId}}(baseUrl : Text{{#allParams}}, {{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async {{#returnType}}{{returnType}}{{/returnType}}{{^returnType}}(){{/returnType}} {
         let url = baseUrl # "{{path}}"{{#pathParams}} # "/" # {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}}{{/pathParams}};
 
-        let request : HttpRequest = {
+        {{#useDfx}}
+        let request : CanisterHttpRequestArgument = {
             url = url;
-            method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
+            max_response_bytes = null;
             headers = [
                 { name = "Content-Type"; value = "application/json" }{{#headerParams}},
                 { name = "{{baseName}}"; value = {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}} }{{/headerParams}}
             ];
             body = {{#bodyParam}}?Text.encodeUtf8({{paramName}}){{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
+            method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
             transform = null;
         };
 
-        let response : HttpResponse = await IC.http_request(request);
+        // Call the management canister's http_request method
+        // Note: Requires cycles and proper canister configuration
+        let response : CanisterHttpResponsePayload = await http_request(request);
+        {{/useDfx}}
+        {{^useDfx}}
+        let request : CanisterHttpRequestArgument = {
+            url = url;
+            max_response_bytes = null;
+            headers = [
+                { name = "Content-Type"; value = "application/json" }{{#headerParams}},
+                { name = "{{baseName}}"; value = {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}} }{{/headerParams}}
+            ];
+            body = {{#bodyParam}}?Text.encodeUtf8({{paramName}}){{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
+            method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
+            transform = null;
+        };
+
+        // Call the management canister's http_request method
+        // Note: Requires cycles and proper canister configuration
+        let response : CanisterHttpResponsePayload = await managementCanister.http_request(request);
+        {{/useDfx}}
 
         {{#returnType}}
         // TODO: Parse response.body and return {{returnType}}
