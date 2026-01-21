@@ -2,7 +2,54 @@
 {{#description}}
 /// {{{description}}}
 {{/description}}
+
+import IC "mo:core/InternetComputer";
+import Blob "mo:core/Blob";
+import Text "mo:core/Text";
+
 module {
+    type HttpHeader = {
+        name : Text;
+        value : Text;
+    };
+
+    type HttpMethod = {
+        #get;
+        #post;
+        #put;
+        #delete;
+        #patch;
+        #head;
+    };
+
+    type HttpRequest = {
+        url : Text;
+        method : HttpMethod;
+        headers : [HttpHeader];
+        body : ?Blob;
+        transform : ?{
+            function : shared query {
+                response : {
+                    status : Nat;
+                    headers : [HttpHeader];
+                    body : Blob;
+                };
+                context : Blob;
+            } -> {
+                status : Nat;
+                headers : [HttpHeader];
+                body : Blob;
+            };
+            context : Blob;
+        };
+    };
+
+    type HttpResponse = {
+        status : Nat;
+        headers : [HttpHeader];
+        body : Blob;
+    };
+
 {{#operations}}
 {{#operation}}
     {{#summary}}
@@ -11,10 +58,27 @@ module {
     {{#notes}}
     /// {{{notes}}}
     {{/notes}}
-    public func {{operationId}}({{#allParams}}{{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{^-last}}, {{/-last}}{{/allParams}}) : async {{#returnType}}{{returnType}}{{/returnType}}{{^returnType}}(){{/returnType}} {
-        // TODO: Implement {{operationId}}
-        // Method: {{httpMethod}}
-        // Path: {{path}}
+    public func {{operationId}}(baseUrl : Text{{#allParams}}, {{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async {{#returnType}}{{returnType}}{{/returnType}}{{^returnType}}(){{/returnType}} {
+        let url = baseUrl # "{{path}}"{{#pathParams}} # "/" # {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}}{{/pathParams}};
+
+        let request : HttpRequest = {
+            url = url;
+            method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
+            headers = [
+                { name = "Content-Type"; value = "application/json" }{{#headerParams}},
+                { name = "{{baseName}}"; value = {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}} }{{/headerParams}}
+            ];
+            body = {{#bodyParam}}?Text.encodeUtf8({{paramName}}){{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
+            transform = null;
+        };
+
+        let response : HttpResponse = await IC.http_request(request);
+
+        {{#returnType}}
+        // TODO: Parse response.body and return {{returnType}}
+        // For now, returning a placeholder
+        {{#isArray}}[]{{/isArray}}{{#isString}}""{{/isString}}{{#isNumeric}}0{{/isNumeric}}{{#isBoolean}}false{{/isBoolean}}{{^isArray}}{{^isString}}{{^isNumeric}}{{^isBoolean}}throw Error.reject("Not implemented"){{/isBoolean}}{{/isNumeric}}{{/isString}}{{/isArray}}
+        {{/returnType}}
     };
 
 {{/operation}}
