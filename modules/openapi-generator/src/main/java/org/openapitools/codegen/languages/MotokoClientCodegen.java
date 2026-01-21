@@ -46,6 +46,17 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         modelPackage = "Models";
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
 
+        // Motoko language-specific primitives (don't need imports)
+        languageSpecificPrimitives.clear();
+        languageSpecificPrimitives.add("Text");
+        languageSpecificPrimitives.add("Char");
+        languageSpecificPrimitives.add("Bool");
+        languageSpecificPrimitives.add("Int");
+        languageSpecificPrimitives.add("Float");
+        languageSpecificPrimitives.add("Blob");
+        languageSpecificPrimitives.add("Array");
+        languageSpecificPrimitives.add("Any");
+
         // Motoko type mappings
         typeMapping.clear();
         typeMapping.put("string", "Text");
