@@ -1,0 +1,22 @@
+// {{classname}}.mo
+{{#description}}
+/// {{{description}}}
+{{/description}}
+module {
+{{#operations}}
+{{#operation}}
+    {{#summary}}
+    /// {{{summary}}}
+    {{/summary}}
+    {{#notes}}
+    /// {{{notes}}}
+    {{/notes}}
+    public func {{operationId}}({{#allParams}}{{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{^-last}}, {{/-last}}{{/allParams}}) : async {{#returnType}}{{returnType}}{{/returnType}}{{^returnType}}(){{/returnType}} {
+        // TODO: Implement {{operationId}}
+        // Method: {{httpMethod}}
+        // Path: {{path}}
+    };
+
+{{/operation}}
+{{/operations}}
+}

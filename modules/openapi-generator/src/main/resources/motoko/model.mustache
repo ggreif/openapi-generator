@@ -1,0 +1,18 @@
+// {{classname}}.mo
+{{#description}}
+/// {{{description}}}
+{{/description}}
+module {
+{{#vars}}
+    {{#description}}
+    /// {{{description}}}
+    {{/description}}
+    public type {{name}} = {{dataType}};
+{{/vars}}
+
+    public type {{classname}} = {
+{{#vars}}
+        {{name}} : {{#isNullable}}?{{/isNullable}}{{dataType}};
+{{/vars}}
+    };
+}

@@ -37,12 +37,35 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         super();
 
         outputFolder = "generated-code" + File.separator + "motoko";
-        modelTemplateFiles.put("model.mustache", ".zz");
-        apiTemplateFiles.put("api.mustache", ".zz");
+        modelTemplateFiles.put("model.mustache", ".mo");
+        apiTemplateFiles.put("api.mustache", ".mo");
         embeddedTemplateDir = templateDir = "motoko";
         apiPackage = "Apis";
         modelPackage = "Models";
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
+
+        // Motoko type mappings
+        typeMapping.clear();
+        typeMapping.put("string", "Text");
+        typeMapping.put("char", "Char");
+        typeMapping.put("boolean", "Bool");
+        typeMapping.put("int", "Int");
+        typeMapping.put("integer", "Int");
+        typeMapping.put("long", "Int");
+        typeMapping.put("float", "Float");
+        typeMapping.put("double", "Float");
+        typeMapping.put("number", "Float");
+        typeMapping.put("date", "Text");
+        typeMapping.put("DateTime", "Text");
+        typeMapping.put("password", "Text");
+        typeMapping.put("file", "Blob");
+        typeMapping.put("binary", "Blob");
+        typeMapping.put("ByteArray", "Blob");
+        typeMapping.put("UUID", "Text");
+        typeMapping.put("URI", "Text");
+        typeMapping.put("array", "Array");
+        typeMapping.put("map", "HashMap.HashMap");
+        typeMapping.put("object", "Any");
 
         cliOptions.add(CliOption.newString(PROJECT_NAME, "Project name for generated code"));
     }
