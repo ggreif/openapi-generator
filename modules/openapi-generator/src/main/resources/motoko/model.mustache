@@ -1,9 +1,16 @@
 {{#models}}
+{{#imports}}
+{{^isMappedType}}
+import { type {{import}} } "./{{import}}";
+{{/isMappedType}}
+{{/imports}}
+
 {{#model}}
 // {{classname}}.mo
 {{#description}}
 /// {{{description}}}
 {{/description}}
+
 module {
     public type {{classname}} = {
 {{#vars}}

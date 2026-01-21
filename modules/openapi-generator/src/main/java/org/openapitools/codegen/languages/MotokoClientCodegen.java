@@ -54,6 +54,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         languageSpecificPrimitives.add("Float");
         languageSpecificPrimitives.add("Blob");
         languageSpecificPrimitives.add("Any");
+        languageSpecificPrimitives.add("Array");
 
         // Motoko type mappings
         typeMapping.clear();
@@ -110,6 +111,13 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
     public boolean getUseDfx() {
         return useDfx;
+    }
+
+    @Override
+    public String toModelImport(String name) {
+        // For Motoko, imports are relative to the current Models directory
+        // Just return the model name without package prefix
+        return name;
     }
 
     @Override
@@ -193,7 +201,24 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         // Call parent first
         objs = super.postProcessModels(objs);
         // Process enum models
-        return postProcessModelsEnum(objs);
+        objs = postProcessModelsEnum(objs);
+
+        // Mark imports that are mapped types (primitives) or array/map types so they can be filtered out
+        List<Map<String, String>> imports = objs.getImports();
+        if (imports != null) {
+            for (Map<String, String> im : imports) {
+                String importName = im.get("import");
+                // Check if this import is a primitive/mapped type or array/map type
+                boolean isMappedType = (importName != null && typeMapping.containsKey(importName)) ||
+                                        (importName != null && languageSpecificPrimitives.contains(importName)) ||
+                                        (importName != null && importName.startsWith("["));
+                if (isMappedType) {
+                    im.put("isMappedType", "true");
+                }
+            }
+        }
+
+        return objs;
     }
 
     @Override
