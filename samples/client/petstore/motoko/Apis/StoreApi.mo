@@ -29,7 +29,7 @@ module {
 
     /// Returns pet inventories by status
     /// Returns a map of status codes to quantities
-    public func getInventory(baseUrl : Text) : async HashMap.HashMap {
+    public func getInventory(baseUrl : Text) : async [Text: Int] {
         let url = baseUrl # "/store/inventory";
 
         let request : CanisterHttpRequestArgument = {
@@ -47,7 +47,7 @@ module {
         // Note: Requires cycles and proper canister configuration
         let response : CanisterHttpResponsePayload = await http_request(request);
 
-        // TODO: Parse response.body and return HashMap.HashMap
+        // TODO: Parse response.body and return [Text: Int]
         // For now, returning a placeholder
         throw Error.reject("Not implemented")
     };

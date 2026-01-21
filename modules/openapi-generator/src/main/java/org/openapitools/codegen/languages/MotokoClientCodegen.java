@@ -41,6 +41,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     public MotokoClientCodegen() {
         super();
 
+
         outputFolder = "generated-code" + File.separator + "motoko";
         modelTemplateFiles.put("model.mustache", ".mo");
         apiTemplateFiles.put("api.mustache", ".mo");
@@ -120,15 +121,22 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     @Override
     public String getTypeDeclaration(io.swagger.v3.oas.models.media.Schema schema) {
         // Handle array types: convert to Motoko syntax [ElementType]
+        String result;
         if (ModelUtils.isArraySchema(schema)) {
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getSchemaItems(schema);
-            return "[" + getTypeDeclaration(inner) + "]";
+            result = "[" + getTypeDeclaration(inner) + "]";
+
+            return result;
         } else if (ModelUtils.isMapSchema(schema)) {
             // Handle map types: convert to Motoko syntax [Text: ValueType]
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            return "[Text: " + getTypeDeclaration(inner) + "]";
+            result = "[Text: " + getTypeDeclaration(inner) + "]";
+
+            return result;
         }
-        return super.getTypeDeclaration(schema);
+        result = super.getTypeDeclaration(schema);
+
+        return result;
     }
 
     @Override
@@ -175,13 +183,20 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     public void postProcessParameter(CodegenParameter parameter) {
         super.postProcessParameter(parameter);
 
+        System.out.println("DEBUG-MOTOKO postProcessParameter: name=" + parameter.paramName +
+                           " dataType=" + parameter.dataType +
+                           " isArray=" + parameter.isArray +
+                           " items=" + (parameter.items != null ? parameter.items.dataType : "null"));
+
         // Fix dataType for arrays and maps that may have slipped through as bare types
         // This happens when the dataType is set before our getSchemaType is called
         if ("array".equals(parameter.dataType) || "Array".equals(parameter.dataType)) {
             // Try to reconstruct the array type from the parameter
             if (parameter.isArray && parameter.items != null) {
                 // items is a CodegenProperty, not CodegenParameter - just use its dataType
+                String old = parameter.dataType;
                 parameter.dataType = "[" + parameter.items.dataType + "]";
+
             }
         }
     }
@@ -203,17 +218,20 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             }
         }
 
-        // Mark imports that are mapped types (primitives) so they can be commented out
+        // Mark imports that are mapped types (primitives) or array/map types so they can be filtered out
         List<Map<String, String>> imports = result.getImports();
         if (imports != null) {
             for (Map<String, String> im : imports) {
                 // Get the classname field - this is what we use in the template
                 String className = im.get("classname");
                 // Check if this classname is a key in typeMapping (meaning it's a primitive/mapped type)
-                boolean isMappedType = className != null && typeMapping.containsKey(className);
+                // OR if it starts with '[' (array/map type) which shouldn't be imported
+                boolean isMappedType = (className != null && typeMapping.containsKey(className)) ||
+                                        (className != null && className.startsWith("["));
                 // In Mustache, only add the key if it's true (for conditional sections)
                 if (isMappedType) {
                     im.put("isMappedType", "true");
+
                 }
             }
         }

@@ -4,7 +4,6 @@ import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; typ
 import Text "mo:core/Text";
 import { type ApiResponse } "../Models/ApiResponse";
 import { type Pet } "../Models/Pet";
-import { type array } "../Models/array";
 
 module {
     /// Add a new pet to the store
@@ -57,7 +56,7 @@ module {
 
     /// Finds Pets by status
     /// Multiple status values can be provided with comma separated strings
-    public func findPetsByStatus(baseUrl : Text, status : array) : async array {
+    public func findPetsByStatus(baseUrl : Text, status : [Text]) : async [Pet] {
         let url = baseUrl # "/pet/findByStatus";
 
         let request : CanisterHttpRequestArgument = {
@@ -75,14 +74,14 @@ module {
         // Note: Requires cycles and proper canister configuration
         let response : CanisterHttpResponsePayload = await http_request(request);
 
-        // TODO: Parse response.body and return array
+        // TODO: Parse response.body and return [Pet]
         // For now, returning a placeholder
         []
     };
 
     /// Finds Pets by tags
     /// Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
-    public func findPetsByTags(baseUrl : Text, tags : array) : async array {
+    public func findPetsByTags(baseUrl : Text, tags : [Text]) : async [Pet] {
         let url = baseUrl # "/pet/findByTags";
 
         let request : CanisterHttpRequestArgument = {
@@ -100,7 +99,7 @@ module {
         // Note: Requires cycles and proper canister configuration
         let response : CanisterHttpResponsePayload = await http_request(request);
 
-        // TODO: Parse response.body and return array
+        // TODO: Parse response.body and return [Pet]
         // For now, returning a placeholder
         []
     };

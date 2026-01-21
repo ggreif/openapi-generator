@@ -3,7 +3,6 @@
 import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 import Text "mo:core/Text";
 import { type User } "../Models/User";
-import { type array } "../Models/array";
 
 module {
     /// Create user
@@ -30,7 +29,7 @@ module {
 
     /// Creates list of users with given input array
     /// 
-    public func createUsersWithArrayInput(baseUrl : Text, user : array) : async () {
+    public func createUsersWithArrayInput(baseUrl : Text, user : [User]) : async () {
         let url = baseUrl # "/user/createWithArray";
 
         let request : CanisterHttpRequestArgument = {
@@ -52,7 +51,7 @@ module {
 
     /// Creates list of users with given input array
     /// 
-    public func createUsersWithListInput(baseUrl : Text, user : array) : async () {
+    public func createUsersWithListInput(baseUrl : Text, user : [User]) : async () {
         let url = baseUrl # "/user/createWithList";
 
         let request : CanisterHttpRequestArgument = {
