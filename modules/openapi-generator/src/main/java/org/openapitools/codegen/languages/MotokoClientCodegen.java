@@ -208,12 +208,14 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             for (Map<String, String> im : imports) {
                 String importName = im.get("import");
                 // Check if this import is a primitive/mapped type or array/map type
-                boolean isMappedType = (importName != null && typeMapping.containsKey(importName)) ||
-                                        (importName != null && typeMapping.containsValue(importName)) ||
-                                        (importName != null && languageSpecificPrimitives.contains(importName)) ||
-                                        (importName != null && importName.startsWith("["));
-                if (isMappedType) {
-                    im.put("isMappedType", "true");
+                if (importName != null) {
+                    boolean isMappedType = typeMapping.containsKey(importName) ||
+                                            typeMapping.containsValue(importName) ||
+                                            languageSpecificPrimitives.contains(importName) ||
+                                            importName.startsWith("[");
+                    if (isMappedType) {
+                        im.put("isMappedType", "true");
+                    }
                 }
             }
         }
@@ -246,12 +248,13 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 String className = im.get("classname");
                 // Check if this classname is a key in typeMapping (meaning it's a primitive/mapped type)
                 // OR if it starts with '[' (array/map type) which shouldn't be imported
-                boolean isMappedType = (className != null && typeMapping.containsKey(className)) ||
-                                        (className != null && className.startsWith("["));
-                // In Mustache, only add the key if it's true (for conditional sections)
-                if (isMappedType) {
-                    im.put("isMappedType", "true");
-
+                if (className != null) {
+                    boolean isMappedType = typeMapping.containsKey(className) ||
+                                            className.startsWith("[");
+                    // In Mustache, only add the key if it's true (for conditional sections)
+                    if (isMappedType) {
+                        im.put("isMappedType", "true");
+                    }
                 }
             }
         }
