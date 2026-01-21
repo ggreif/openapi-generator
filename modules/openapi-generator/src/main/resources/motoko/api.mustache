@@ -4,51 +4,14 @@
 {{/description}}
 
 import IC "mo:core/InternetComputer";
-import Blob "mo:core/Blob";
 import Text "mo:core/Text";
 
 module {
-    type HttpHeader = {
-        name : Text;
-        value : Text;
-    };
-
-    type HttpMethod = {
-        #get;
-        #post;
-        #put;
-        #delete;
-        #patch;
-        #head;
-    };
-
-    type HttpRequest = {
-        url : Text;
-        method : HttpMethod;
-        headers : [HttpHeader];
-        body : ?Blob;
-        transform : ?{
-            function : shared query {
-                response : {
-                    status : Nat;
-                    headers : [HttpHeader];
-                    body : Blob;
-                };
-                context : Blob;
-            } -> {
-                status : Nat;
-                headers : [HttpHeader];
-                body : Blob;
-            };
-            context : Blob;
-        };
-    };
-
-    type HttpResponse = {
-        status : Nat;
-        headers : [HttpHeader];
-        body : Blob;
-    };
+    // Import types from InternetComputer module
+    type HttpRequest = IC.HttpRequest;
+    type HttpResponse = IC.HttpResponse;
+    type HttpMethod = IC.HttpMethod;
+    type HttpHeader = IC.HttpHeader;
 
 {{#operations}}
 {{#operation}}
