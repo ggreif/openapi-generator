@@ -1,6 +1,8 @@
 package org.openapitools.codegen.languages;
 
 import org.openapitools.codegen.*;
+import org.openapitools.codegen.model.ModelMap;
+import org.openapitools.codegen.model.OperationsMap;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.MapProperty;
 import io.swagger.models.properties.Property;
@@ -112,5 +114,27 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
     public boolean getUseDfx() {
         return useDfx;
+    }
+
+    @Override
+    public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
+        OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
+
+        // Mark imports that are mapped types (primitives) so they can be commented out
+        List<Map<String, String>> imports = result.getImports();
+        if (imports != null) {
+            for (Map<String, String> im : imports) {
+                // Get the classname field - this is what we use in the template
+                String className = im.get("classname");
+                // Check if this classname is a key in typeMapping (meaning it's a primitive/mapped type)
+                boolean isMappedType = className != null && typeMapping.containsKey(className);
+                // In Mustache, only add the key if it's true (for conditional sections)
+                if (isMappedType) {
+                    im.put("isMappedType", "true");
+                }
+            }
+        }
+
+        return result;
     }
 }
