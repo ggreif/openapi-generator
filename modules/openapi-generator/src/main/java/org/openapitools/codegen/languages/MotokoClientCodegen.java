@@ -2,6 +2,7 @@ package org.openapitools.codegen.languages;
 
 import org.openapitools.codegen.*;
 import org.openapitools.codegen.model.ModelMap;
+import org.openapitools.codegen.model.ModelsMap;
 import org.openapitools.codegen.model.OperationsMap;
 import org.openapitools.codegen.utils.ModelUtils;
 import io.swagger.models.properties.ArrayProperty;
@@ -185,6 +186,14 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 parameter.dataType = "[" + parameter.items.dataType + "]"; // TODO: what if parameter.items.dataType is itself a collection?
             }
         }
+    }
+
+    @Override
+    public ModelsMap postProcessModels(ModelsMap objs) {
+        // Call parent first
+        objs = super.postProcessModels(objs);
+        // Process enum models
+        return postProcessModelsEnum(objs);
     }
 
     @Override
