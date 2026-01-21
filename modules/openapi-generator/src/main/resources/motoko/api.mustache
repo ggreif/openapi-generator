@@ -6,46 +6,48 @@
 {{#useDfx}}
 import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 import Text "mo:core/Text";
+
+module {
 {{/useDfx}}
 {{^useDfx}}
 import Text "mo:core/Text";
 
-// Management Canister interface for HTTP outcalls
-type HttpHeader = {
-    name : Text;
-    value : Text;
-};
-
-type HttpMethod = {
-    #get;
-    #head;
-    #post;
-};
-
-type CanisterHttpRequestArgument = {
-    url : Text;
-    max_response_bytes : ?Nat64;
-    headers : [HttpHeader];
-    body : ?Blob;
-    method : HttpMethod;
-    transform : ?{
-        function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
-        context : Blob;
-    };
-};
-
-type CanisterHttpResponsePayload = {
-    status : Nat;
-    headers : [HttpHeader];
-    body : Blob;
-};
-
-let managementCanister = actor "aaaaa-aa" : actor {
-    http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload;
-};
-{{/useDfx}}
-
 module {
+    // Management Canister interface for HTTP outcalls
+    type HttpHeader = {
+        name : Text;
+        value : Text;
+    };
+
+    type HttpMethod = {
+        #get;
+        #head;
+        #post;
+    };
+
+    type CanisterHttpRequestArgument = {
+        url : Text;
+        max_response_bytes : ?Nat64;
+        headers : [HttpHeader];
+        body : ?Blob;
+        method : HttpMethod;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+    };
+
+    type CanisterHttpResponsePayload = {
+        status : Nat;
+        headers : [HttpHeader];
+        body : Blob;
+    };
+
+    let managementCanister = actor "aaaaa-aa" : actor {
+        http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload;
+    };
+
+{{/useDfx}}
 {{#operations}}
 {{#operation}}
     {{#summary}}
