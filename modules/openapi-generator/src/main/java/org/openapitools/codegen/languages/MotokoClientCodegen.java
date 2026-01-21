@@ -47,54 +47,19 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
         // Motoko reserved words
         // Based on Motoko language specification
-        reservedWords.add("actor");
-        reservedWords.add("and");
-        reservedWords.add("async");
-        reservedWords.add("await");
-        reservedWords.add("break");
-        reservedWords.add("case");
-        reservedWords.add("catch");
-        reservedWords.add("class");
-        reservedWords.add("continue");
-        reservedWords.add("debug");
-        reservedWords.add("do");
-        reservedWords.add("else");
-        reservedWords.add("false");
-        reservedWords.add("for");
-        reservedWords.add("func");
-        reservedWords.add("if");
-        reservedWords.add("in");
-        reservedWords.add("import");
-        reservedWords.add("module");
-        reservedWords.add("not");
-        reservedWords.add("null");
-        reservedWords.add("object");
-        reservedWords.add("or");
-        reservedWords.add("label");
-        reservedWords.add("let");
-        reservedWords.add("loop");
-        reservedWords.add("private");
-        reservedWords.add("public");
-        reservedWords.add("return");
-        reservedWords.add("shared");
-        reservedWords.add("switch");
-        reservedWords.add("throw");
-        reservedWords.add("true");
-        reservedWords.add("try");
-        reservedWords.add("type");
-        reservedWords.add("var");
-        reservedWords.add("while");
-        reservedWords.add("with");
+        reservedWords.addAll(Arrays.asList(
+            "actor", "and", "async", "await", "break", "case", "catch", "class",
+            "continue", "debug", "do", "else", "false", "for", "func", "if",
+            "in", "import", "module", "not", "null", "object", "or", "label",
+            "let", "loop", "private", "public", "return", "shared", "switch",
+            "throw", "true", "try", "type", "var", "while", "with"
+        ));
 
         // Motoko language-specific primitives (don't need imports)
         languageSpecificPrimitives.clear();
-        languageSpecificPrimitives.add("Text");
-        languageSpecificPrimitives.add("Char");
-        languageSpecificPrimitives.add("Bool");
-        languageSpecificPrimitives.add("Int");
-        languageSpecificPrimitives.add("Float");
-        languageSpecificPrimitives.add("Blob");
-        languageSpecificPrimitives.add("Any");
+        languageSpecificPrimitives.addAll(Arrays.asList(
+            "Text", "Char", "Bool", "Int", "Float", "Blob", "Any"
+        ));
 
         // Motoko type mappings
         typeMapping.clear();
