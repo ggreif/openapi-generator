@@ -4,15 +4,10 @@
 {{/description}}
 
 import IC "mo:core/InternetComputer";
+import { type HttpRequest; type HttpResponse; type HttpMethod; type HttpHeader } "mo:core/InternetComputer";
 import Text "mo:core/Text";
 
 module {
-    // Import types from InternetComputer module
-    type HttpRequest = IC.HttpRequest;
-    type HttpResponse = IC.HttpResponse;
-    type HttpMethod = IC.HttpMethod;
-    type HttpHeader = IC.HttpHeader;
-
 {{#operations}}
 {{#operation}}
     {{#summary}}
