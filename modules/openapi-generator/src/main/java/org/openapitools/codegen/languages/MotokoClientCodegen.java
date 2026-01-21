@@ -54,7 +54,6 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         languageSpecificPrimitives.add("Float");
         languageSpecificPrimitives.add("Blob");
         languageSpecificPrimitives.add("Any");
-        languageSpecificPrimitives.add("Array");
 
         // Motoko type mappings
         typeMapping.clear();
@@ -210,6 +209,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 String importName = im.get("import");
                 // Check if this import is a primitive/mapped type or array/map type
                 boolean isMappedType = (importName != null && typeMapping.containsKey(importName)) ||
+                                        (importName != null && typeMapping.containsValue(importName)) ||
                                         (importName != null && languageSpecificPrimitives.contains(importName)) ||
                                         (importName != null && importName.startsWith("["));
                 if (isMappedType) {
