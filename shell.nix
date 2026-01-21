@@ -1,5 +1,10 @@
 { pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/refs/tags/25.11.tar.gz") {} }:
 
+let
+  motoko-flake = builtins.getFlake "github:caffeinelabs/motoko";
+  moc = motoko-flake.packages.${pkgs.system}.moc;
+in
+
 pkgs.mkShell {
   name = "openapi-generator-motoko-dev";
 
@@ -8,6 +13,9 @@ pkgs.mkShell {
     openjdk17      # Free/libre OpenJDK
     maven
     git
+
+    # Motoko compiler
+    moc
 
     # Helpful development tools
     which
@@ -24,8 +32,9 @@ pkgs.mkShell {
     echo "  OpenAPI Generator - Motoko Development"
     echo "════════════════════════════════════════════"
     echo ""
-    echo "Java:  $(java -version 2>&1 | head -n 1)"
-    echo "Maven: $(mvn -version 2>&1 | head -n 1)"
+    echo "Java:   $(java -version 2>&1 | head -n 1)"
+    echo "Maven:  $(mvn -version 2>&1 | head -n 1)"
+    echo "Motoko: $(moc --version 2>&1 | head -n 1)"
     echo ""
 
     export JAVA_HOME="${pkgs.openjdk17.home}"
