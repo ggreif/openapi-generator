@@ -78,7 +78,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         typeMapping.put("ByteArray", "Blob");
         typeMapping.put("UUID", "Text");
         typeMapping.put("URI", "Text");
-        typeMapping.put("array", "Array");
+        typeMapping.put("array", "Array");  // TODO: Handle generic array types like [Pet]
         typeMapping.put("map", "HashMap.HashMap");
         typeMapping.put("object", "Any");
 
@@ -114,6 +114,28 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
     public boolean getUseDfx() {
         return useDfx;
+    }
+
+    @Override
+    public String getTypeDeclaration(String type) {
+        // Handle array types: convert "Array<Foo>" or "array<Foo>" to "[Foo]"
+        if (type != null && type.matches("(?i)array<.+>")) {
+            // Extract the inner type from Array<T>
+            String innerType = type.replaceAll("(?i)array<(.+)>", "$1");
+            return "[" + innerType + "]";
+        }
+        return super.getTypeDeclaration(type);
+    }
+
+    @Override
+    public String getTypeDeclaration(io.swagger.v3.oas.models.media.Schema schema) {
+        String typeDeclaration = super.getTypeDeclaration(schema);
+        // Handle array types: convert "Array<Foo>" or "array<Foo>" to "[Foo]"
+        if (typeDeclaration != null && typeDeclaration.matches("(?i)array<.+>")) {
+            String innerType = typeDeclaration.replaceAll("(?i)array<(.+)>", "$1");
+            return "[" + innerType + "]";
+        }
+        return typeDeclaration;
     }
 
     @Override
