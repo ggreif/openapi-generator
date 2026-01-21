@@ -3,6 +3,7 @@ package org.openapitools.codegen.languages;
 import org.openapitools.codegen.*;
 import org.openapitools.codegen.model.ModelMap;
 import org.openapitools.codegen.model.OperationsMap;
+import org.openapitools.codegen.utils.ModelUtils;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.MapProperty;
 import io.swagger.models.properties.Property;
@@ -78,8 +79,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         typeMapping.put("ByteArray", "Blob");
         typeMapping.put("UUID", "Text");
         typeMapping.put("URI", "Text");
-        typeMapping.put("array", "Array");  // TODO: Handle generic array types like [Pet]
-        typeMapping.put("map", "HashMap.HashMap");
+        typeMapping.put("array", "Array");  // Handled in getTypeDeclaration to produce [T] syntax
+        typeMapping.put("map", "HashMap");  // Handled in getTypeDeclaration to produce [Text: T] syntax
         typeMapping.put("object", "Any");
 
         cliOptions.add(CliOption.newString(PROJECT_NAME, "Project name for generated code"));
@@ -117,30 +118,90 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     }
 
     @Override
-    public String getTypeDeclaration(String type) {
-        // Handle array types: convert "Array<Foo>" or "array<Foo>" to "[Foo]"
-        if (type != null && type.matches("(?i)array<.+>")) {
-            // Extract the inner type from Array<T>
-            String innerType = type.replaceAll("(?i)array<(.+)>", "$1");
-            return "[" + innerType + "]";
+    public String getTypeDeclaration(io.swagger.v3.oas.models.media.Schema schema) {
+        // Handle array types: convert to Motoko syntax [ElementType]
+        if (ModelUtils.isArraySchema(schema)) {
+            io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getSchemaItems(schema);
+            return "[" + getTypeDeclaration(inner) + "]";
+        } else if (ModelUtils.isMapSchema(schema)) {
+            // Handle map types: convert to Motoko syntax [Text: ValueType]
+            io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
+            return "[Text: " + getTypeDeclaration(inner) + "]";
         }
-        return super.getTypeDeclaration(type);
+        return super.getTypeDeclaration(schema);
     }
 
     @Override
-    public String getTypeDeclaration(io.swagger.v3.oas.models.media.Schema schema) {
-        String typeDeclaration = super.getTypeDeclaration(schema);
-        // Handle array types: convert "Array<Foo>" or "array<Foo>" to "[Foo]"
-        if (typeDeclaration != null && typeDeclaration.matches("(?i)array<.+>")) {
-            String innerType = typeDeclaration.replaceAll("(?i)array<(.+)>", "$1");
-            return "[" + innerType + "]";
+    public String getSchemaType(io.swagger.v3.oas.models.media.Schema schema) {
+        // Handle array types first, before calling super.getSchemaType()
+        // This is critical because super.getSchemaType() returns "array" without the element type
+        if (ModelUtils.isArraySchema(schema)) {
+            String inner = getSchemaType(ModelUtils.getSchemaItems(schema));
+            return "[" + inner + "]";
+        } else if (ModelUtils.isMapSchema(schema)) {
+            io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
+            return "[Text: " + getSchemaType(inner) + "]";
         }
-        return typeDeclaration;
+
+        String openAPIType = super.getSchemaType(schema);
+        String type;
+        // Check if we have a type mapping for this OpenAPI type
+        if (typeMapping.containsKey(openAPIType)) {
+            type = typeMapping.get(openAPIType);
+            // If it's a language-specific primitive, return it directly
+            if (languageSpecificPrimitives.contains(type)) {
+                return type;
+            }
+        } else {
+            type = openAPIType;
+        }
+        // Otherwise, convert to model name
+        return toModelName(type);
+    }
+
+    @Override
+    public String toInstantiationType(io.swagger.v3.oas.models.media.Schema schema) {
+        if (ModelUtils.isMapSchema(schema)) {
+            io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
+            return "[Text: " + getSchemaType(inner) + "]";
+        } else if (ModelUtils.isArraySchema(schema)) {
+            String inner = getSchemaType(ModelUtils.getSchemaItems(schema));
+            return "[" + inner + "]";
+        }
+        return null;
+    }
+
+    @Override
+    public void postProcessParameter(CodegenParameter parameter) {
+        super.postProcessParameter(parameter);
+
+        // Fix dataType for arrays and maps that may have slipped through as bare types
+        // This happens when the dataType is set before our getSchemaType is called
+        if ("array".equals(parameter.dataType) || "Array".equals(parameter.dataType)) {
+            // Try to reconstruct the array type from the parameter
+            if (parameter.isArray && parameter.items != null) {
+                // items is a CodegenProperty, not CodegenParameter - just use its dataType
+                parameter.dataType = "[" + parameter.items.dataType + "]";
+            }
+        }
     }
 
     @Override
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
+
+        // Fix array types in operations
+        org.openapitools.codegen.model.OperationMap operations = result.getOperations();
+        if (operations != null) {
+            for (org.openapitools.codegen.CodegenOperation op : operations.getOperation()) {
+                // Fix return type if it's a bare "array"
+                if ("array".equals(op.returnType) || "Array".equals(op.returnType)) {
+                    if (op.returnContainer != null && op.returnContainer.equals("array")) {
+                        op.returnType = "[" + op.returnBaseType + "]";
+                    }
+                }
+            }
+        }
 
         // Mark imports that are mapped types (primitives) so they can be commented out
         List<Map<String, String>> imports = result.getImports();
