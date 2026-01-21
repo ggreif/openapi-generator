@@ -14,14 +14,9 @@ import java.util.*;
 
 import org.apache.commons.lang3.StringUtils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig {
     public static final String PROJECT_NAME = "projectName";
     public static final String USE_DFX = "useDfx";
-
-    private final Logger LOGGER = LoggerFactory.getLogger(MotokoClientCodegen.class);
 
     protected String projectName = "OpenAPI";
     protected boolean useDfx = false;
@@ -35,12 +30,11 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     }
 
     public String getHelp() {
-        return "Generates a motoko client.";
+        return "Generates a Motoko OpenAPI client module.";
     }
 
     public MotokoClientCodegen() {
         super();
-
 
         outputFolder = "generated-code" + File.separator + "motoko";
         modelTemplateFiles.put("model.mustache", ".mo");
@@ -58,7 +52,6 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         languageSpecificPrimitives.add("Int");
         languageSpecificPrimitives.add("Float");
         languageSpecificPrimitives.add("Blob");
-        languageSpecificPrimitives.add("Array");
         languageSpecificPrimitives.add("Any");
 
         // Motoko type mappings
@@ -134,9 +127,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
             return result;
         }
-        result = super.getTypeDeclaration(schema);
 
-        return result;
+        return super.getTypeDeclaration(schema);
     }
 
     @Override
@@ -148,7 +140,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             return "[" + inner + "]";
         } else if (ModelUtils.isMapSchema(schema)) {
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            return "[Text: " + getSchemaType(inner) + "]";
+            return "[Text: " + getSchemaType(inner) + "]"; // TODO: Use core/Map
         }
 
         String openAPIType = super.getSchemaType(schema);
@@ -171,7 +163,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     public String toInstantiationType(io.swagger.v3.oas.models.media.Schema schema) {
         if (ModelUtils.isMapSchema(schema)) {
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            return "[Text: " + getSchemaType(inner) + "]";
+            return "[Text: " + getSchemaType(inner) + "]"; // TODO: Use core/Map
         } else if (ModelUtils.isArraySchema(schema)) {
             String inner = getSchemaType(ModelUtils.getSchemaItems(schema));
             return "[" + inner + "]";
@@ -183,20 +175,14 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     public void postProcessParameter(CodegenParameter parameter) {
         super.postProcessParameter(parameter);
 
-        System.out.println("DEBUG-MOTOKO postProcessParameter: name=" + parameter.paramName +
-                           " dataType=" + parameter.dataType +
-                           " isArray=" + parameter.isArray +
-                           " items=" + (parameter.items != null ? parameter.items.dataType : "null"));
-
         // Fix dataType for arrays and maps that may have slipped through as bare types
         // This happens when the dataType is set before our getSchemaType is called
-        if ("array".equals(parameter.dataType) || "Array".equals(parameter.dataType)) {
+        if ("array".equals(parameter.dataType) || "Array".equals(parameter.dataType)) { // TODO: is comparison agains "Array" necessary?
             // Try to reconstruct the array type from the parameter
             if (parameter.isArray && parameter.items != null) {
                 // items is a CodegenProperty, not CodegenParameter - just use its dataType
                 String old = parameter.dataType;
-                parameter.dataType = "[" + parameter.items.dataType + "]";
-
+                parameter.dataType = "[" + parameter.items.dataType + "]"; // TODO: what if parameter.items.dataType is itself a collection?
             }
         }
     }
@@ -210,7 +196,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         if (operations != null) {
             for (org.openapitools.codegen.CodegenOperation op : operations.getOperation()) {
                 // Fix return type if it's a bare "array"
-                if ("array".equals(op.returnType) || "Array".equals(op.returnType)) {
+                if ("array".equals(op.returnType) || "Array".equals(op.returnType)) { // TODO: is comparison agains "Array" necessary?
                     if (op.returnContainer != null && op.returnContainer.equals("array")) {
                         op.returnType = "[" + op.returnBaseType + "]";
                     }
