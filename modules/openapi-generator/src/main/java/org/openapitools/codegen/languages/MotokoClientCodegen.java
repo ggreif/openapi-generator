@@ -75,6 +75,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         typeMapping.put("UUID", "Text");
         typeMapping.put("URI", "Text");
         typeMapping.put("array", "Array");  // Handled in getTypeDeclaration to produce [T] syntax
+        // FIXME: Motoko doesn't have a builtin syntax for `Map`. The [Text: T] syntax used below is fantasy.
+        // The correct approach is to use Map<K, V> from the core/Map module.
         typeMapping.put("map", "HashMap");  // Handled in getTypeDeclaration to produce [Text: T] syntax
         typeMapping.put("object", "Any");
 
