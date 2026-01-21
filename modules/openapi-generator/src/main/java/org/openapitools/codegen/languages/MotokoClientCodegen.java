@@ -45,6 +45,47 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         modelPackage = "Models";
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
 
+        // Motoko reserved words
+        // Based on Motoko language specification
+        reservedWords.add("actor");
+        reservedWords.add("and");
+        reservedWords.add("async");
+        reservedWords.add("await");
+        reservedWords.add("break");
+        reservedWords.add("case");
+        reservedWords.add("catch");
+        reservedWords.add("class");
+        reservedWords.add("continue");
+        reservedWords.add("debug");
+        reservedWords.add("do");
+        reservedWords.add("else");
+        reservedWords.add("false");
+        reservedWords.add("for");
+        reservedWords.add("func");
+        reservedWords.add("if");
+        reservedWords.add("in");
+        reservedWords.add("import");
+        reservedWords.add("module");
+        reservedWords.add("not");
+        reservedWords.add("null");
+        reservedWords.add("object");
+        reservedWords.add("or");
+        reservedWords.add("label");
+        reservedWords.add("let");
+        reservedWords.add("loop");
+        reservedWords.add("private");
+        reservedWords.add("public");
+        reservedWords.add("return");
+        reservedWords.add("shared");
+        reservedWords.add("switch");
+        reservedWords.add("throw");
+        reservedWords.add("true");
+        reservedWords.add("try");
+        reservedWords.add("type");
+        reservedWords.add("var");
+        reservedWords.add("while");
+        reservedWords.add("with");
+
         // Motoko language-specific primitives (don't need imports)
         languageSpecificPrimitives.clear();
         languageSpecificPrimitives.add("Text");
@@ -112,6 +153,14 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
     public boolean getUseDfx() {
         return useDfx;
+    }
+
+    @Override
+    public String escapeReservedWord(String name) {
+        // Per Internet Computer IDL-Motoko spec:
+        // Reserved keywords are escaped by appending an underscore "_"
+        // See: https://github.com/dfinity/motoko/blob/master/design/IDL-Motoko.md
+        return name + "_";
     }
 
     @Override
