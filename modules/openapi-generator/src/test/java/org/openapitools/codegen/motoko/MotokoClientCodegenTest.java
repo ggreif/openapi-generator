@@ -13,7 +13,10 @@ public class MotokoClientCodegenTest {
 
     @Test
     public void shouldSucceed() throws Exception {
-        // TODO: Complete this test.
-        Assert.fail("Not implemented.");
+        codegen.processOpts();
+
+        Assert.assertEquals(codegen.getName(), "motoko");
+        Assert.assertEquals(codegen.getTag(), CodegenType.CLIENT);
+        Assert.assertNotNull(codegen.getHelp());
     }
 }
