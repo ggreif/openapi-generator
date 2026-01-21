@@ -19,6 +19,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
     private final Logger LOGGER = LoggerFactory.getLogger(MotokoClientCodegen.class);
 
+    protected String projectName = "OpenAPI";
+
     public CodegenType getTag() {
         return CodegenType.CLIENT;
     }
@@ -41,6 +43,24 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         apiPackage = "Apis";
         modelPackage = "Models";
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
-        // TODO: Fill this out.
+
+        cliOptions.add(CliOption.newString(PROJECT_NAME, "Project name for generated code"));
+    }
+
+    @Override
+    public void processOpts() {
+        super.processOpts();
+
+        if (additionalProperties.containsKey(PROJECT_NAME)) {
+            setProjectName((String) additionalProperties.get(PROJECT_NAME));
+        }
+    }
+
+    public void setProjectName(String projectName) {
+        this.projectName = projectName;
+    }
+
+    public String getProjectName() {
+        return projectName;
     }
 }
