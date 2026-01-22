@@ -185,12 +185,12 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
     @Override
     public String toInstantiationType(io.swagger.v3.oas.models.media.Schema schema) {
-        if (ModelUtils.isMapSchema(schema)) {
-            io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            return "Map.Map<Text, " + getSchemaType(inner) + ">";
-        } else if (ModelUtils.isArraySchema(schema)) {
+        if (ModelUtils.isArraySchema(schema)) {
             String inner = getSchemaType(ModelUtils.getSchemaItems(schema));
             return "[" + inner + "]";
+        } else if (ModelUtils.isMapSchema(schema)) {
+            io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
+            return "Map.Map<Text, " + getSchemaType(inner) + ">";
         }
         return null;
     }
