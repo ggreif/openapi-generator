@@ -82,8 +82,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         typeMapping.put("URI", "Text");
         typeMapping.put("array", "Array");  // Handled in getTypeDeclaration to produce [T] syntax
         // Maps use the red-black tree based Map from core/pure/Map
-        // TODO: Add generator option to emit imperative maps (HashMap.HashMap) for Caffeine's purposes
-        typeMapping.put("map", "Map.Map");
+        // Using destructuring import to get Map type directly
+        typeMapping.put("map", "Map");
         typeMapping.put("object", "Any");
 
         cliOptions.add(CliOption.newString(PROJECT_NAME, "Project name for generated code"));
@@ -145,9 +145,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
             return result;
         } else if (ModelUtils.isMapSchema(schema)) {
-            // Handle map types: convert to Motoko Map syntax Map.Map<Text, ValueType>
+            // Handle map types: convert to Motoko Map syntax Map<Text, ValueType>
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            result = "Map.Map<Text, " + getTypeDeclaration(inner) + ">";
+            result = "Map<Text, " + getTypeDeclaration(inner) + ">";
 
             return result;
         }
@@ -164,7 +164,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             return "[" + inner + "]";
         } else if (ModelUtils.isMapSchema(schema)) {
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            return "Map.Map<Text, " + getSchemaType(inner) + ">";
+            return "Map<Text, " + getSchemaType(inner) + ">";
         }
 
         String openAPIType = super.getSchemaType(schema);
@@ -190,7 +190,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             return "[" + inner + "]";
         } else if (ModelUtils.isMapSchema(schema)) {
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            return "Map.Map<Text, " + getSchemaType(inner) + ">";
+            return "Map<Text, " + getSchemaType(inner) + ">";
         }
         return null;
     }
@@ -228,7 +228,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 org.openapitools.codegen.CodegenModel model = modelMap.getModel();
                 if (model != null && model.vars != null) {
                     for (org.openapitools.codegen.CodegenProperty prop : model.vars) {
-                        if (prop.dataType != null && prop.dataType.contains("Map.Map")) {
+                        if (prop.dataType != null && prop.dataType.contains("Map<")) {
                             needsMapImport = true;
                             break;
                         }
@@ -249,7 +249,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                                             typeMapping.containsValue(importName) ||
                                             languageSpecificPrimitives.contains(importName) ||
                                             importName.startsWith("[") ||
-                                            importName.contains(".");  // Filter out type references like "Map.Map"
+                                            importName.contains(".") ||  // Filter out type references like "Map.Map"
+                                            importName.contains("<");     // Filter out parameterized types like "Map<Text, Int>"
                     if (isMappedType) {
                         im.put("isMappedType", "true");
                     }
@@ -258,6 +259,10 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         }
 
         // Add Map import if needed
+        // TODO: Add end-to-end test for when OpenAPI spec contains a model named "Map"
+        //       Similar to "Text" and other primitives, it will need escaping/renaming to avoid
+        //       conflicts with the core library's Map type. Test should verify that user-defined
+        //       "Map" model gets properly escaped (e.g., "Map_") while Map<K,V> type works correctly.
         if (needsMapImport) {
             if (imports == null) {
                 imports = new ArrayList<>();
@@ -292,14 +297,14 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 }
 
                 // Check if return type uses Map
-                if (op.returnType != null && op.returnType.contains("Map.Map")) {
+                if (op.returnType != null && op.returnType.contains("Map<")) {
                     needsMapImport = true;
                 }
 
                 // Check if any parameters use Map
                 if (op.allParams != null) {
                     for (org.openapitools.codegen.CodegenParameter param : op.allParams) {
-                        if (param.dataType != null && param.dataType.contains("Map.Map")) {
+                        if (param.dataType != null && param.dataType.contains("Map<")) {
                             needsMapImport = true;
                             break;
                         }
@@ -319,7 +324,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 if (className != null) {
                     boolean isMappedType = typeMapping.containsKey(className) ||
                                             className.startsWith("[") ||
-                                            className.contains(".");  // Filter out type references like "Map.Map"
+                                            className.contains(".") ||  // Filter out type references like "Map.Map"
+                                            className.contains("<");     // Filter out parameterized types like "Map<Text, Int>"
                     // In Mustache, only add the key if it's true (for conditional sections)
                     if (isMappedType) {
                         im.put("isMappedType", "true");
@@ -329,6 +335,10 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         }
 
         // Add Map import if needed
+        // TODO: Add end-to-end test for when OpenAPI spec contains a model named "Map"
+        //       Similar to "Text" and other primitives, it will need escaping/renaming to avoid
+        //       conflicts with the core library's Map type. Test should verify that user-defined
+        //       "Map" model gets properly escaped (e.g., "Map_") while Map<K,V> type works correctly.
         if (needsMapImport) {
             if (imports == null) {
                 imports = new ArrayList<>();

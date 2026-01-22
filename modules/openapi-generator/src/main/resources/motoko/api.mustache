@@ -9,7 +9,7 @@ import Error "mo:core/Error";
 import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 {{/useDfx}}
 {{#imports}}
-{{#isMap}}import Map "mo:core/pure/Map";
+{{#isMap}}import { type Map } "mo:core/pure/Map";
 {{/isMap}}{{^isMappedType}}import { type {{classname}} } "../Models/{{classname}}";
 {{/isMappedType}}
 {{/imports}}
