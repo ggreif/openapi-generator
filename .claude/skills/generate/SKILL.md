@@ -20,6 +20,8 @@ This skill helps generate Motoko client code from OpenAPI specifications and ver
    mvn clean install -DskipTests
    ```
 
+   **IMPORTANT**: Always rebuild after modifying templates (`.mustache` files) or generator code. A stale `openapi-generator-cli.jar` in `modules/openapi-generator-cli/target/` will cause generated code to not reflect your changes.
+
 2. **Generate Motoko samples**:
    ```bash
    bin/generate-samples.sh bin/configs/motoko-petstore-new.yaml
@@ -75,6 +77,7 @@ The repository includes a minimal typecheck-only stub of the serde library at `v
 1. **Import errors**: If you see "package 'core' not defined", you forgot the `--package core /Users/ggreif/motoko-core/src` flag
 2. **Type errors**: Often indicate issues in the generator logic, not the generated code
 3. **Missing imports**: Check that parameterized types like `Map<K,V>` are filtered from model imports
+4. **Unexpected generated code**: If generated files don't match template changes, the generator CLI JAR is likely stale. Rebuild with `mvn clean install -DskipTests` to update `modules/openapi-generator-cli/target/openapi-generator-cli.jar` with recent template modifications.
 
 When invoked, help the user with:
 - Generating samples from OpenAPI specs
