@@ -30,3 +30,15 @@ Add automated tests that:
 - Test both useDfx=true and useDfx=false modes
 
 Consider adding to CI pipeline.
+
+---
+
+TODO: Document Motoko generator in upstream OpenAPITools
+
+Prepare PR for OpenAPITools/openapi-generator documentation:
+- Add Motoko to list of supported generators
+- Document configuration options (useDfx, projectName)
+- Include example usage and generated code samples
+- Link to IC/Motoko resources
+
+Target: docs/generators/motoko.md
