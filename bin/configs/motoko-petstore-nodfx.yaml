@@ -1,0 +1,7 @@
+generatorName: motoko
+outputDir: samples/client/petstore/motoko-nodfx
+inputSpec: modules/openapi-generator/src/test/resources/3_0/petstore.yaml
+templateDir: modules/openapi-generator/src/main/resources/motoko
+additionalProperties:
+  hideGenerationTimestamp: "true"
+  useDfx: false
