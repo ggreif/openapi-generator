@@ -1,6 +1,7 @@
 // UserApi.mo
 
 import Text "mo:core/Text";
+import Error "mo:core/Error";
 import { type User } "../Models/User";
 
 module {

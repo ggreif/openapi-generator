@@ -1,6 +1,7 @@
 // StoreApi.mo
 
 import Text "mo:core/Text";
+import Error "mo:core/Error";
 import { type Order } "../Models/Order";
 import Map "mo:core/pure/Map";
 

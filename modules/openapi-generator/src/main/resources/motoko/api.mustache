@@ -6,6 +6,7 @@
 {{#useDfx}}
 import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 import Text "mo:core/Text";
+import Error "mo:core/Error";
 {{#imports}}
 {{#isMap}}import Map "mo:core/pure/Map";
 {{/isMap}}{{^isMappedType}}import { type {{classname}} } "../Models/{{classname}}";
@@ -16,6 +17,7 @@ module {
 {{/useDfx}}
 {{^useDfx}}
 import Text "mo:core/Text";
+import Error "mo:core/Error";
 {{#imports}}
 {{#isMap}}import Map "mo:core/pure/Map";
 {{/isMap}}{{^isMappedType}}import { type {{classname}} } "../Models/{{classname}}";

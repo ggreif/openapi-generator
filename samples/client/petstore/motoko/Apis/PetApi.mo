@@ -1,6 +1,7 @@
 // PetApi.mo
 
 import Text "mo:core/Text";
+import Error "mo:core/Error";
 import { type ApiResponse } "../Models/ApiResponse";
 import { type Pet } "../Models/Pet";
 
