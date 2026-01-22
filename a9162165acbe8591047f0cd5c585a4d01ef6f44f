@@ -5,3 +5,16 @@ package manager, remove the typecheck-only stub at vendor/serde/.
 
 The stub was a temporary solution for typechecking during development.
 Production code should use the real mo:serde implementation.
+
+---
+
+TODO: Re-add Motoko generated samples to git
+
+Currently in .gitignore per policy "not ready for commit yet".
+When the Motoko generator is stable and production-ready:
+
+1. Remove motoko/ entries from .gitignore
+2. git add samples/client/petstore/motoko*
+3. Commit as reference implementations
+
+Keep samples in sync with template changes going forward.
