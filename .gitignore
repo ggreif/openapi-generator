@@ -305,3 +305,7 @@ samples/client/petstore/ocaml-additional-properties/_build/
 
 # jetbrain http client
 samples/client/jetbrains/adyen/checkout71/http/client/Apis/http-client.private.env.json
+
+# Generated Motoko samples (not ready for commit yet)
+samples/client/petstore/motoko/
+samples/client/petstore/motoko-nodfx/
