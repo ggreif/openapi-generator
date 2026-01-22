@@ -18,3 +18,15 @@ When the Motoko generator is stable and production-ready:
 3. Commit as reference implementations
 
 Keep samples in sync with template changes going forward.
+
+---
+
+TODO: Create integration tests for Motoko generator
+
+Add automated tests that:
+- Generate Motoko samples from various OpenAPI specs
+- Typecheck generated code with moc
+- Verify correct handling of edge cases (arrays, maps, optional fields)
+- Test both useDfx=true and useDfx=false modes
+
+Consider adding to CI pipeline.
