@@ -1,0 +1,18 @@
+---
+
+TODO: Add end-to-end test for Map name collision
+
+Test case: OpenAPI spec with a user-defined model named "Map"
+
+The Motoko generator needs to handle conflicts between:
+- User-defined models (e.g., a model called "Map")
+- Core library types (Map<K,V> from mo:core/pure/Map)
+
+Test should verify:
+1. User-defined "Map" model gets escaped (e.g., "Map_")
+2. Map<K,V> parameterized type still works correctly
+3. Both can coexist in generated code without conflicts
+
+Similar pattern to other reserved words like "Text", "Error", etc.
+
+Location: MotokoClientCodegen.java lines 262, 338
