@@ -28,17 +28,22 @@ This skill helps generate Motoko client code from OpenAPI specifications and ver
    ```
 
 3. **Typecheck generated files with moc**:
-   Always use these options when typechecking:
+   Always use these options when typechecking (from repo root):
    ```bash
-   moc --check --package core /Users/ggreif/motoko-core/src <file.mo>
+   moc --check \
+     --package core /Users/ggreif/motoko-core/src \
+     --package serde vendor/serde/src \
+     <file.mo>
    ```
 
    Example for checking all API files:
    ```bash
-   cd samples/client/petstore/motoko
-   for file in Apis/*.mo; do
+   for file in samples/client/petstore/motoko/Apis/*.mo; do
      echo "Checking $file..."
-     moc --check --package core /Users/ggreif/motoko-core/src "$file"
+     moc --check \
+       --package core /Users/ggreif/motoko-core/src \
+       --package serde vendor/serde/src \
+       "$file"
    done
    ```
 
@@ -49,6 +54,13 @@ The Motoko core library is located at `/Users/ggreif/motoko-core/src` and contai
 - Standard types and utilities: `Text.mo`, `Error.mo`, `Iter.mo`, etc.
 
 You can read these files to understand the API and type signatures.
+
+## Vendored Serde Stub
+
+The repository includes a minimal typecheck-only stub of the serde library at `vendor/serde/src/`:
+- **Purpose**: Type signatures for JSON serialization/deserialization used in generated code
+- **Not functional**: This is only for typechecking, not runtime use
+- **Real implementation**: Production code should use `mo:serde` from mops
 
 ## Current Generator Features
 

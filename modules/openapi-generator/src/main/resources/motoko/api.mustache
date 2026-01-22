@@ -5,6 +5,7 @@
 
 import Text "mo:core/Text";
 import Error "mo:core/Error";
+import { JSON } "mo:serde";
 {{#useDfx}}
 import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 {{/useDfx}}
@@ -27,6 +28,9 @@ module {
         #get;
         #head;
         #post;
+        #put;
+        #delete;
+        #patch;
     };
 
     type CanisterHttpRequestArgument = {
@@ -71,7 +75,7 @@ module {
                 { name = "Content-Type"; value = "application/json" }{{#headerParams}},
                 { name = "{{baseName}}"; value = {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}} }{{/headerParams}}
             ];
-            body = {{#bodyParam}}?Text.encodeUtf8({{paramName}}){{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
+            body = {{#bodyParam}}do ? { let candidBlob = to_candid({{paramName}}); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) }{{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
             method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
             transform = null;
         };
@@ -88,7 +92,7 @@ module {
                 { name = "Content-Type"; value = "application/json" }{{#headerParams}},
                 { name = "{{baseName}}"; value = {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}} }{{/headerParams}}
             ];
-            body = {{#bodyParam}}?Text.encodeUtf8({{paramName}}){{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
+            body = {{#bodyParam}}do ? { let candidBlob = to_candid({{paramName}}); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) }{{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
             method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
             transform = null;
         };
@@ -99,9 +103,22 @@ module {
         {{/useDfx}}
 
         {{#returnType}}
-        // TODO: Parse response.body and return {{{returnType}}}
-        // For now, returning a placeholder
-        {{#isArray}}[]{{/isArray}}{{#isString}}""{{/isString}}{{#isNumeric}}0{{/isNumeric}}{{#isBoolean}}false{{/isBoolean}}{{^isArray}}{{^isString}}{{^isNumeric}}{{^isBoolean}}throw Error.reject("Not implemented"){{/isBoolean}}{{/isNumeric}}{{/isString}}{{/isArray}}
+        // Parse JSON response
+        let responseText = switch (Text.decodeUtf8(response.body)) {
+            case (?text) text;
+            case null throw Error.reject("Failed to decode response body as UTF-8");
+        };
+
+        let jsonBlob = switch (JSON.fromText(responseText, null)) {
+            case (#ok(blob)) blob;
+            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
+        };
+
+        let result : ?{{{returnType}}} = from_candid(jsonBlob);
+        switch (result) {
+            case (?value) value;
+            case null throw Error.reject("Failed to deserialize response to {{{returnType}}}");
+        }
         {{/returnType}}
     };
 
