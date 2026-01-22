@@ -7,7 +7,8 @@
 import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 import Text "mo:core/Text";
 {{#imports}}
-{{^isMappedType}}import { type {{classname}} } "../Models/{{classname}}";
+{{#isMap}}import Map "mo:core/pure/Map";
+{{/isMap}}{{^isMappedType}}import { type {{classname}} } "../Models/{{classname}}";
 {{/isMappedType}}
 {{/imports}}
 
@@ -16,7 +17,8 @@ module {
 {{^useDfx}}
 import Text "mo:core/Text";
 {{#imports}}
-{{^isMappedType}}import { type {{classname}} } "../Models/{{classname}}";
+{{#isMap}}import Map "mo:core/pure/Map";
+{{/isMap}}{{^isMappedType}}import { type {{classname}} } "../Models/{{classname}}";
 {{/isMappedType}}
 {{/imports}}
 
@@ -65,7 +67,7 @@ module {
     {{#notes}}
     /// {{{notes}}}
     {{/notes}}
-    public func {{operationId}}(baseUrl : Text{{#allParams}}, {{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async {{#returnType}}{{returnType}}{{/returnType}}{{^returnType}}(){{/returnType}} {
+    public func {{operationId}}(baseUrl : Text{{#allParams}}, {{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async {{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}(){{/returnType}} {
         let url = baseUrl # "{{path}}"{{#pathParams}} # "/" # {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}}{{/pathParams}};
 
         {{#useDfx}}
@@ -104,7 +106,7 @@ module {
         {{/useDfx}}
 
         {{#returnType}}
-        // TODO: Parse response.body and return {{returnType}}
+        // TODO: Parse response.body and return {{{returnType}}}
         // For now, returning a placeholder
         {{#isArray}}[]{{/isArray}}{{#isString}}""{{/isString}}{{#isNumeric}}0{{/isNumeric}}{{#isBoolean}}false{{/isBoolean}}{{^isArray}}{{^isString}}{{^isNumeric}}{{^isBoolean}}throw Error.reject("Not implemented"){{/isBoolean}}{{/isNumeric}}{{/isString}}{{/isArray}}
         {{/returnType}}

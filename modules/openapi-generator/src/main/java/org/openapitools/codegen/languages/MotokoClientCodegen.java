@@ -81,9 +81,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         typeMapping.put("UUID", "Text");
         typeMapping.put("URI", "Text");
         typeMapping.put("array", "Array");  // Handled in getTypeDeclaration to produce [T] syntax
-        // FIXME: Motoko doesn't have a builtin syntax for `Map`. The [Text: T] syntax used below is fantasy.
-        // The correct approach is to use Map<K, V> from the core/Map module.
-        typeMapping.put("map", "HashMap");  // Handled in getTypeDeclaration to produce [Text: T] syntax
+        // Maps use the red-black tree based Map from core/pure/Map
+        // TODO: Add generator option to emit imperative maps (HashMap.HashMap) for Caffeine's purposes
+        typeMapping.put("map", "Map.Map");
         typeMapping.put("object", "Any");
 
         cliOptions.add(CliOption.newString(PROJECT_NAME, "Project name for generated code"));
@@ -145,9 +145,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
             return result;
         } else if (ModelUtils.isMapSchema(schema)) {
-            // Handle map types: convert to Motoko syntax [Text: ValueType]
+            // Handle map types: convert to Motoko Map syntax Map.Map<Text, ValueType>
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            result = "[Text: " + getTypeDeclaration(inner) + "]";
+            result = "Map.Map<Text, " + getTypeDeclaration(inner) + ">";
 
             return result;
         }
@@ -164,7 +164,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             return "[" + inner + "]";
         } else if (ModelUtils.isMapSchema(schema)) {
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            return "[Text: " + getSchemaType(inner) + "]"; // TODO: Use core/Map
+            return "Map.Map<Text, " + getSchemaType(inner) + ">";
         }
 
         String openAPIType = super.getSchemaType(schema);
@@ -187,7 +187,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     public String toInstantiationType(io.swagger.v3.oas.models.media.Schema schema) {
         if (ModelUtils.isMapSchema(schema)) {
             io.swagger.v3.oas.models.media.Schema inner = ModelUtils.getAdditionalProperties(schema);
-            return "[Text: " + getSchemaType(inner) + "]"; // TODO: Use core/Map
+            return "Map.Map<Text, " + getSchemaType(inner) + ">";
         } else if (ModelUtils.isArraySchema(schema)) {
             String inner = getSchemaType(ModelUtils.getSchemaItems(schema));
             return "[" + inner + "]";
@@ -218,6 +218,26 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         // Process enum models
         objs = postProcessModelsEnum(objs);
 
+        // Check if we need to import Map
+        boolean needsMapImport = false;
+
+        // Check all model properties for Map usage
+        List<ModelMap> models = objs.getModels();
+        if (models != null) {
+            for (ModelMap modelMap : models) {
+                org.openapitools.codegen.CodegenModel model = modelMap.getModel();
+                if (model != null && model.vars != null) {
+                    for (org.openapitools.codegen.CodegenProperty prop : model.vars) {
+                        if (prop.dataType != null && prop.dataType.contains("Map.Map")) {
+                            needsMapImport = true;
+                            break;
+                        }
+                    }
+                }
+                if (needsMapImport) break;
+            }
+        }
+
         // Mark imports that are mapped types (primitives) or array/map types so they can be filtered out
         List<Map<String, String>> imports = objs.getImports();
         if (imports != null) {
@@ -228,12 +248,26 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                     boolean isMappedType = typeMapping.containsKey(importName) ||
                                             typeMapping.containsValue(importName) ||
                                             languageSpecificPrimitives.contains(importName) ||
-                                            importName.startsWith("[");
+                                            importName.startsWith("[") ||
+                                            importName.contains(".");  // Filter out type references like "Map.Map"
                     if (isMappedType) {
                         im.put("isMappedType", "true");
                     }
                 }
             }
+        }
+
+        // Add Map import if needed
+        if (needsMapImport) {
+            if (imports == null) {
+                imports = new ArrayList<>();
+                objs.put("imports", imports);
+            }
+            Map<String, String> mapImport = new HashMap<>();
+            mapImport.put("import", "Map");
+            mapImport.put("isMap", "true");
+            mapImport.put("isMappedType", "true");  // Prevent it from being imported as a model
+            imports.add(mapImport);
         }
 
         return objs;
@@ -243,6 +277,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
 
+        // Check if we need to import Map
+        boolean needsMapImport = false;
+
         // Fix array types in operations
         org.openapitools.codegen.model.OperationMap operations = result.getOperations();
         if (operations != null) {
@@ -251,6 +288,21 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 if ("array".equals(op.returnType) || "Array".equals(op.returnType)) { // TODO: is comparison agains "Array" necessary?
                     if (op.returnContainer != null && op.returnContainer.equals("array")) {
                         op.returnType = "[" + op.returnBaseType + "]";
+                    }
+                }
+
+                // Check if return type uses Map
+                if (op.returnType != null && op.returnType.contains("Map.Map")) {
+                    needsMapImport = true;
+                }
+
+                // Check if any parameters use Map
+                if (op.allParams != null) {
+                    for (org.openapitools.codegen.CodegenParameter param : op.allParams) {
+                        if (param.dataType != null && param.dataType.contains("Map.Map")) {
+                            needsMapImport = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -266,13 +318,28 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 // OR if it starts with '[' (array/map type) which shouldn't be imported
                 if (className != null) {
                     boolean isMappedType = typeMapping.containsKey(className) ||
-                                            className.startsWith("[");
+                                            className.startsWith("[") ||
+                                            className.contains(".");  // Filter out type references like "Map.Map"
                     // In Mustache, only add the key if it's true (for conditional sections)
                     if (isMappedType) {
                         im.put("isMappedType", "true");
                     }
                 }
             }
+        }
+
+        // Add Map import if needed
+        if (needsMapImport) {
+            if (imports == null) {
+                imports = new ArrayList<>();
+                result.put("imports", imports);
+            }
+            Map<String, String> mapImport = new HashMap<>();
+            mapImport.put("import", "Map");
+            mapImport.put("classname", "Map");
+            mapImport.put("isMap", "true");
+            mapImport.put("isMappedType", "true");  // Prevent it from being imported as a model
+            imports.add(mapImport);
         }
 
         return result;

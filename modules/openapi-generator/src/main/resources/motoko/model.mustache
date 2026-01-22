@@ -1,6 +1,7 @@
 {{#models}}
 {{#imports}}
-{{^isMappedType}}
+{{#isMap}}import Map "mo:core/pure/Map";
+{{/isMap}}{{^isMappedType}}
 import { type {{import}} } "./{{import}}";
 {{/isMappedType}}
 {{/imports}}
@@ -17,7 +18,7 @@ module {
         {{#description}}
         /// {{{description}}}
         {{/description}}
-        {{name}} : {{^required}}?{{/required}}{{dataType}};
+        {{name}} : {{^required}}?{{/required}}{{{dataType}}};
 {{/vars}}
     };
 }
