@@ -42,3 +42,15 @@ Prepare PR for OpenAPITools/openapi-generator documentation:
 - Link to IC/Motoko resources
 
 Target: docs/generators/motoko.md
+
+---
+
+TODO: Test with real-world OpenAPI specs
+
+Beyond petstore, test generator with:
+- GitHub API (complex nested objects)
+- Stripe API (extensive use of discriminators)
+- OpenAI API (large enum types)
+- Internet Computer API specs (if available)
+
+Identify and fix edge cases in production APIs.
