@@ -37,6 +37,14 @@ echo "Deploying api_test canister..."
 dfx deploy api_test
 
 echo ""
+echo "Adding cycles to canister for HTTP outcalls..."
+# First, fund the wallet canister with ICP (which gets converted to cycles)
+WALLET_ID=$(dfx identity get-wallet)
+dfx ledger fabricate-cycles --canister "$WALLET_ID" --amount 10
+# Then deposit cycles from wallet to the api_test canister
+dfx canister deposit-cycles 100_000_000_000_000 api_test
+
+echo ""
 echo "=== Running Tests ==="
 
 # Test health check

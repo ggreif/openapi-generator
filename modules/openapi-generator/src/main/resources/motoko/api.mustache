@@ -80,9 +80,9 @@ module {
             transform = null;
         };
 
-        // Call the management canister's http_request method
-        // Note: Requires cycles and proper canister configuration
-        let response : CanisterHttpResponsePayload = await http_request(request);
+        // Call the management canister's http_request method with cycles
+        // 30M cycles should be sufficient for most requests
+        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
         {{/useDfx}}
         {{^useDfx}}
         let request : CanisterHttpRequestArgument = {
@@ -97,9 +97,9 @@ module {
             transform = null;
         };
 
-        // Call the management canister's http_request method
-        // Note: Requires cycles and proper canister configuration
-        let response : CanisterHttpResponsePayload = await managementCanister.http_request(request);
+        // Call the management canister's http_request method with cycles
+        // 30M cycles should be sufficient for most requests
+        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) managementCanister.http_request(request);
         {{/useDfx}}
 
         {{#returnType}}
