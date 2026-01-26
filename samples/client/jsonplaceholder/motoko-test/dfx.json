@@ -2,7 +2,7 @@
   "version": 1,
   "defaults": {
     "build": {
-      "packtool": "mops sources"
+      "packtool": "npx ic-mops sources"
     }
   },
   "canisters": {
