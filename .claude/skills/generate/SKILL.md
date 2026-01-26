@@ -70,7 +70,7 @@ You can read these files to understand the API and type signatures.
 
 ## Dependency Management
 
-**Mops configuration** (create `mops.toml` in the generated samples directory):
+**Mops configuration** (automatically generated with `mops.toml.mustache`):
 ```toml
 [package]
 name = "<package-name>"
@@ -79,11 +79,15 @@ version = "1.0.0"
 [dependencies]
 core = "2.0.0"
 serde = "https://github.com/ggreif/serde#<commit-hash>"
+# ... plus transitive dependencies
 ```
 
 This configuration uses:
 - `core` published version for pure data structures and standard types
-- `serde` from GitHub for JSON serialization (mops auto-resolves its transitive dependencies)
+- `serde` from ggreif fork (temporary during motoko-core transition)
+- All transitive dependencies explicitly listed to work around mops resolution
+
+**NOTE**: The `github.com/ggreif/*` references are temporary forks. When upstreamed, replace with official published versions (see comment in mops.toml.mustache template).
 
 **Vendored Serde Stub** (`vendor/serde/src/`):
 - Minimal typecheck-only stub for quick validation
