@@ -5,6 +5,7 @@ import { type Post } "../generated/Models/Post";
 import Debug "mo:core/Debug";
 import Array "mo:core/Array";
 import Nat "mo:core/Nat";
+import Int "mo:core/Int";
 
 persistent actor {
   transient let baseUrl = "https://jsonplaceholder.typicode.com";
@@ -24,7 +25,7 @@ persistent actor {
 
   // Test endpoint 2: Get single post by ID
   public func testGetPostById(id: Int) : async Post {
-    Debug.print("Calling GET /posts/" # debug_show(id));
+    Debug.print("Calling GET /posts/" # Int.toText(id));
     let post = await DefaultApi.getPostById(baseUrl, id);
     Debug.print("Retrieved post: " # post.title);
     post
