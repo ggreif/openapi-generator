@@ -31,8 +31,11 @@ motoko-test/
 
 - **dfx** 0.23.0 or later
 - **moc** (Motoko compiler)
-- **mops** (via `npx ic-mops`)
+- **mops** (via `npx ic-mops`) - Install with: `npm install -g ic-mops`
+- **moc-wrapper** - Provided by ic-mops, needed for dfx packtool integration
 - **Node.js** (for mops)
+
+> **Note:** The `deploy.sh` script will automatically look for `moc-wrapper` in common locations (`~/motoko/node_modules/.bin`, `./node_modules/.bin`). If not found, install ic-mops globally: `npm install -g ic-mops`
 
 ## Quick Start
 

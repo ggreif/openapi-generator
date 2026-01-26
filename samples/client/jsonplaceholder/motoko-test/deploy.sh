@@ -3,8 +3,31 @@
 
 cd "$(dirname "$0")"
 
-# Add moc-wrapper to PATH
-export PATH="/Users/ggreif/motoko/node_modules/.bin:$PATH"
+# Check for moc-wrapper and add to PATH if needed
+if ! command -v moc-wrapper &> /dev/null; then
+  # Try common locations for moc-wrapper
+  COMMON_PATHS=(
+    "$HOME/motoko/node_modules/.bin"
+    "./node_modules/.bin"
+    "../node_modules/.bin"
+  )
+
+  MOC_WRAPPER_FOUND=false
+  for path in "${COMMON_PATHS[@]}"; do
+    if [ -x "$path/moc-wrapper" ]; then
+      export PATH="$path:$PATH"
+      MOC_WRAPPER_FOUND=true
+      break
+    fi
+  done
+
+  if [ "$MOC_WRAPPER_FOUND" = false ]; then
+    echo "Error: moc-wrapper not found in PATH"
+    echo "Please install it with: npm install -g ic-mops"
+    echo "Or ensure it's available in your PATH"
+    exit 1
+  fi
+fi
 
 echo "Starting local dfx replica..."
 dfx start --clean --background
