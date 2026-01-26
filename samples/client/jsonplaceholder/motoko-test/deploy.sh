@@ -3,6 +3,9 @@
 
 cd "$(dirname "$0")"
 
+# Add moc-wrapper to PATH
+export PATH="/Users/ggreif/motoko/node_modules/.bin:$PATH"
+
 echo "Starting local dfx replica..."
 dfx start --clean --background
 
