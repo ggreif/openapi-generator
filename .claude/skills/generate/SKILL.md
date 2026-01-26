@@ -29,8 +29,28 @@ This skill helps generate Motoko client code from OpenAPI specifications and ver
    bin/generate-samples.sh bin/configs/motoko-petstore-nodfx.yaml
    ```
 
-3. **Typecheck generated files with moc**:
-   Always use these options when typechecking (from repo root):
+3. **Typecheck generated files**:
+
+   **Primary method** - Use `mops` to manage dependencies and typecheck:
+   ```bash
+   cd samples/client/<spec-name>/motoko
+
+   # Install dependencies (first time or after mops.toml changes)
+   npx ic-mops install
+
+   # Get package flags from mops and typecheck all files
+   PACKAGE_FLAGS=$(npx ic-mops sources)
+   for file in Models/*.mo Apis/*.mo; do
+     echo "Checking $file..."
+     moc --check $PACKAGE_FLAGS "$file"
+   done
+   ```
+
+   Or use the convenience script if available: `./typecheck.sh`
+
+   This approach uses the real `serde` library with all dependencies managed by mops.
+
+   **Alternative** - Quick typechecking with vendored stub (from repo root):
    ```bash
    moc --check \
      --package core /Users/ggreif/motoko-core/src \
@@ -38,16 +58,7 @@ This skill helps generate Motoko client code from OpenAPI specifications and ver
      <file.mo>
    ```
 
-   Example for checking all API files:
-   ```bash
-   for file in samples/client/petstore/motoko/Apis/*.mo; do
-     echo "Checking $file..."
-     moc --check \
-       --package core /Users/ggreif/motoko-core/src \
-       --package serde vendor/serde/src \
-       "$file"
-   done
-   ```
+   **Note about warnings**: Generated API files will show warnings about unused identifiers (parameters like `response`, `status`, etc. in stub implementations). These warnings are expected and should be ignored - they're parameters in the generated API stubs that aren't used yet.
 
 ## Motoko Core Library Reference
 
@@ -57,12 +68,28 @@ The Motoko core library is located at `/Users/ggreif/motoko-core/src` and contai
 
 You can read these files to understand the API and type signatures.
 
-## Vendored Serde Stub
+## Dependency Management
 
-The repository includes a minimal typecheck-only stub of the serde library at `vendor/serde/src/`:
-- **Purpose**: Type signatures for JSON serialization/deserialization used in generated code
-- **Not functional**: This is only for typechecking, not runtime use
-- **Real implementation**: Production code should use `mo:serde` from mops
+**Mops configuration** (create `mops.toml` in the generated samples directory):
+```toml
+[package]
+name = "<package-name>"
+version = "1.0.0"
+
+[dependencies]
+core = "/Users/ggreif/motoko-core/src"
+serde = "/Users/ggreif/serde"
+```
+
+This configuration uses:
+- Local `motoko-core` for pure data structures and standard types
+- Local `serde` for JSON serialization (mops auto-resolves its transitive dependencies)
+
+**Vendored Serde Stub** (`vendor/serde/src/`):
+- Minimal typecheck-only stub for quick validation
+- Only provides type signatures, not functional
+- Useful for fast typechecking without dependency resolution
+- For full typechecking with real `serde`, use mops as described above
 
 ## Current Generator Features
 
@@ -74,10 +101,13 @@ The repository includes a minimal typecheck-only stub of the serde library at `v
 
 ## Common Issues
 
-1. **Import errors**: If you see "package 'core' not defined", you forgot the `--package core /Users/ggreif/motoko-core/src` flag
+1. **Import errors**: If you see "package 'core' not defined", you either:
+   - Forgot the `--package core /Users/ggreif/motoko-core/src` flag (when using manual moc)
+   - Haven't run `npx ic-mops install` (when using mops)
 2. **Type errors**: Often indicate issues in the generator logic, not the generated code
 3. **Missing imports**: Check that parameterized types like `Map<K,V>` are filtered from model imports
 4. **Unexpected generated code**: If generated files don't match template changes, the generator CLI JAR is likely stale. Rebuild with `mvn clean install -DskipTests` to update `modules/openapi-generator-cli/target/openapi-generator-cli.jar` with recent template modifications.
+5. **Dependency conflicts**: When using the real `serde` library manually, you may hit transitive dependency version conflicts. Use `mops` to automatically resolve all dependencies correctly.
 
 When invoked, help the user with:
 - Generating samples from OpenAPI specs
