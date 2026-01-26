@@ -44,6 +44,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         apiPackage = "Apis";
         modelPackage = "Models";
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
+        supportingFiles.add(new SupportingFile("mops.toml.mustache", "", "mops.toml"));
 
         // Motoko reserved words
         // Based on Motoko language specification
