@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "dfx": "0.23.0",
+  "canisters": {
+    "api_test": {
+      "type": "motoko",
+      "main": "src/main.mo",
+      "dependencies": [],
+      "build": {
+        "packtool": "mops sources",
+        "args": ""
+      }
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": "mops sources",
+      "args": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral",
+      "replica": {
+        "subnet_type": "system"
+      }
+    }
+  }
+}
