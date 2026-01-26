@@ -77,13 +77,13 @@ name = "<package-name>"
 version = "1.0.0"
 
 [dependencies]
-core = "/Users/ggreif/motoko-core/src"
-serde = "/Users/ggreif/serde"
+core = "2.0.0"
+serde = "https://github.com/ggreif/serde#<commit-hash>"
 ```
 
 This configuration uses:
-- Local `motoko-core` for pure data structures and standard types
-- Local `serde` for JSON serialization (mops auto-resolves its transitive dependencies)
+- `core` published version for pure data structures and standard types
+- `serde` from GitHub for JSON serialization (mops auto-resolves its transitive dependencies)
 
 **Vendored Serde Stub** (`vendor/serde/src/`):
 - Minimal typecheck-only stub for quick validation
