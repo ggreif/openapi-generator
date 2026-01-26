@@ -5,6 +5,10 @@ description = "Generated Motoko client for {{appName}}"
 
 [dependencies]
 core = "2.0.0"
+# NOTE: github.com/ggreif/* are temporary forks used during motoko-core transition.
+# Replace with official published versions when upstreamed:
+#   serde = "3.4.0" (or latest from github.com/NatLabs/serde)
+#   byte-utils = "0.1.2" (or latest official version)
 serde = "https://github.com/ggreif/serde#f92971751842d7470f3fb2df607b93418d2e13fd"
 "cbor@4.1.0" = "4.1.0"
 xtended-numbers = "2.3.0"
