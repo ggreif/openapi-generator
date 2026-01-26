@@ -1,0 +1,14 @@
+TODO: Update mops.toml.mustache to use official published packages
+
+When the motoko-core transition is complete and changes are upstreamed, update
+the mops.toml.mustache template to use official published versions instead of
+ggreif forks:
+
+Changes needed in mops.toml.mustache:
+1. Replace serde fork with official: serde = "3.4.0" (or latest)
+   - Or use: serde = "https://github.com/NatLabs/serde#<commit>"
+2. Replace byte-utils fork with official: byte-utils = "0.1.2" (or latest)
+3. Remove or update the NOTE comment once forks are no longer needed
+4. Verify all transitive dependencies still resolve correctly with mops
+
+This ensures generated samples use canonical, maintained package versions.
