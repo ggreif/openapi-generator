@@ -16,3 +16,15 @@ Test should verify:
 Similar pattern to other reserved words like "Text", "Error", etc.
 
 Location: MotokoClientCodegen.java lines 262, 338
+
+---
+
+TODO: Remove vendored serde stub and manual moc typechecking
+
+Once the mops-based typechecking approach has proven stable and reliable:
+1. Remove vendor/serde/src/ directory (typecheck-only stub)
+2. Remove manual moc typechecking instructions from /generate skill
+3. Make mops the only supported typechecking method
+4. Update all documentation to reference mops workflow only
+
+This consolidates on a single, proper dependency management approach instead of maintaining two parallel methods.
