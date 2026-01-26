@@ -1,0 +1,13 @@
+TODO: Switch from ggreif/serde fork to official NatLabs/serde
+
+The ggreif/serde fork is only used temporarily during the motoko-core transition.
+Once the upstream serde repository has updated its mops.toml to use the published
+core package (instead of local paths), switch back to the official repo.
+
+Changes needed:
+1. Update mops.toml template in /generate skill to use official serde
+2. Use either published version: serde = "3.4.0" (or latest)
+3. Or GitHub reference: serde = "https://github.com/NatLabs/serde#<commit>"
+4. Verify all transitive dependencies resolve correctly with mops
+
+This ensures generated samples use the canonical serde implementation.
