@@ -1,0 +1,79 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Nested Arrays Test API",
+    "version": "1.0.0",
+    "description": "Minimal test API for nested container types in Motoko"
+  },
+  "servers": [
+    {
+      "url": "https://example.com"
+    }
+  ],
+  "paths": {
+    "/matrix": {
+      "get": {
+        "operationId": "getMatrix",
+        "summary": "Get a simple 2D matrix of integers",
+        "responses": {
+          "200": {
+            "description": "A 2D array of integers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data": {
+      "get": {
+        "operationId": "getData",
+        "summary": "Get data with nested arrays in object",
+        "responses": {
+          "200": {
+            "description": "Object containing nested arrays",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DataResponse": {
+        "type": "object",
+        "required": ["matrix", "name"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "matrix": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
