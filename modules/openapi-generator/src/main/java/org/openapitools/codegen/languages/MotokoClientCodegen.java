@@ -49,11 +49,11 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         // Motoko reserved words
         // Based on Motoko language specification
         reservedWords.addAll(Arrays.asList(
-            "actor", "and", "async", "await", "break", "case", "catch", "class",
+            "actor", "and", "assert", "async", "await", "break", "case", "catch", "class",
             "continue", "debug", "do", "else", "false", "for", "func", "if",
             "in", "import", "module", "not", "null", "object", "or", "label",
-            "let", "loop", "private", "public", "return", "shared", "switch",
-            "throw", "true", "try", "type", "var", "while", "with",
+            "let", "loop", "private", "public", "query", "return", "shared", "switch",
+            "system", "throw", "true", "try", "type", "var", "while", "with",
             // Core library types and primitives that could conflict with user-defined models
             // NOTE: Must be lowercase as isReservedWord() converts to lowercase before checking
             "text", "char", "bool", "int", "float", "blob", "any", "map"

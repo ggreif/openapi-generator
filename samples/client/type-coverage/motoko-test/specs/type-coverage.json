@@ -156,6 +156,24 @@
           }
         }
       }
+    },
+    "/reserved-words": {
+      "get": {
+        "operationId": "getReservedWords",
+        "summary": "Test model with fields named after Motoko reserved words",
+        "responses": {
+          "200": {
+            "description": "Object with reserved word field names",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservedWords"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -305,6 +323,176 @@
             "additionalProperties": {
               "type": "string"
             }
+          }
+        }
+      },
+      "ReservedWords": {
+        "type": "object",
+        "required": ["actor", "async", "try", "type"],
+        "properties": {
+          "actor": {
+            "type": "string",
+            "description": "Motoko keyword for actor declaration"
+          },
+          "and": {
+            "type": "boolean",
+            "description": "Motoko boolean operator"
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Motoko keyword for async functions"
+          },
+          "await": {
+            "type": "string",
+            "description": "Motoko keyword for awaiting async calls"
+          },
+          "try": {
+            "type": "integer",
+            "description": "Motoko keyword for exception handling"
+          },
+          "catch": {
+            "type": "string",
+            "description": "Motoko keyword for exception handling"
+          },
+          "throw": {
+            "type": "string",
+            "description": "Motoko keyword for throwing errors"
+          },
+          "import": {
+            "type": "string",
+            "description": "Motoko keyword for importing modules"
+          },
+          "module": {
+            "type": "string",
+            "description": "Motoko keyword for module declaration"
+          },
+          "not": {
+            "type": "boolean",
+            "description": "Motoko boolean operator"
+          },
+          "null": {
+            "type": "string",
+            "description": "Motoko null literal"
+          },
+          "or": {
+            "type": "boolean",
+            "description": "Motoko boolean operator"
+          },
+          "type": {
+            "type": "string",
+            "description": "Motoko keyword for type declaration"
+          },
+          "class": {
+            "type": "string",
+            "description": "Motoko keyword for class declaration"
+          },
+          "func": {
+            "type": "string",
+            "description": "Motoko keyword for function declaration"
+          },
+          "public": {
+            "type": "boolean",
+            "description": "Motoko keyword for public visibility"
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Motoko keyword for private visibility"
+          },
+          "shared": {
+            "type": "boolean",
+            "description": "Motoko keyword for shared functions"
+          },
+          "query": {
+            "type": "string",
+            "description": "Motoko keyword for query functions"
+          },
+          "let": {
+            "type": "integer",
+            "description": "Motoko keyword for immutable binding"
+          },
+          "var": {
+            "type": "integer",
+            "description": "Motoko keyword for mutable binding"
+          },
+          "if": {
+            "type": "boolean",
+            "description": "Motoko keyword for conditional"
+          },
+          "in": {
+            "type": "string",
+            "description": "Motoko keyword for iteration"
+          },
+          "else": {
+            "type": "string",
+            "description": "Motoko keyword for conditional"
+          },
+          "false": {
+            "type": "boolean",
+            "description": "Motoko boolean literal"
+          },
+          "switch": {
+            "type": "string",
+            "description": "Motoko keyword for pattern matching"
+          },
+          "case": {
+            "type": "string",
+            "description": "Motoko keyword for pattern matching"
+          },
+          "for": {
+            "type": "integer",
+            "description": "Motoko keyword for loops"
+          },
+          "while": {
+            "type": "boolean",
+            "description": "Motoko keyword for loops"
+          },
+          "loop": {
+            "type": "string",
+            "description": "Motoko keyword for infinite loops"
+          },
+          "return": {
+            "type": "string",
+            "description": "Motoko keyword for returning values"
+          },
+          "break": {
+            "type": "string",
+            "description": "Motoko keyword for loop control"
+          },
+          "continue": {
+            "type": "string",
+            "description": "Motoko keyword for loop control"
+          },
+          "label": {
+            "type": "string",
+            "description": "Motoko keyword for labeled expressions"
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "Motoko keyword for debugging"
+          },
+          "do": {
+            "type": "string",
+            "description": "Motoko keyword for do-while loops"
+          },
+          "assert": {
+            "type": "boolean",
+            "description": "Motoko keyword for assertions"
+          },
+          "system": {
+            "type": "string",
+            "description": "Motoko keyword for system functions"
+          },
+          "true": {
+            "type": "boolean",
+            "description": "Motoko boolean literal"
+          },
+          "with": {
+            "type": "string",
+            "description": "Motoko keyword for with expressions"
+          },
+          "object": {
+            "type": "string",
+            "description": "Motoko keyword for object literals"
           }
         }
       }
