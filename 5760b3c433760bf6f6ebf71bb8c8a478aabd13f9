@@ -1,0 +1,16 @@
+RESOLVED: Nested container types now verified working
+
+The TODO at MotokoClientCodegen.java line 210 has been removed. Testing confirms:
+- Nested arrays work correctly in responses, request bodies, and model properties
+- Recursion is handled properly via getTypeDeclaration() method (called earlier in pipeline)
+- Similar pattern to Swift generator implementation
+- Test case: samples/client/nested-arrays/motoko-test/
+
+Verified with:
+- [[Int]] in response types ✓
+- [[Int]] in request body parameters ✓
+- [[Int]] in model properties ✓
+- All code typechecks with moc ✓
+
+The parameter.items.dataType is already recursively constructed by the time
+postProcessParameter() is called, so no additional recursion needed there.
