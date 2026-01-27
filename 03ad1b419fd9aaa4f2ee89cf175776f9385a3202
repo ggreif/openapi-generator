@@ -1,0 +1,25 @@
+TODO: Handle nested container types in Motoko generator
+
+The Motoko generator currently has a limitation with nested container types:
+- array-in-array: [[Int]]
+- array-in-map: Map<Text, [Int]>
+- map-in-array: [Map<Text, Int>]
+- array-in-record: { items: [[Post]] }
+- map-in-record: { metadata: Map<Text, [String]> }
+- And reversed cases
+
+Current code in MotokoClientCodegen.java line 210 has a TODO:
+  parameter.dataType = "[" + parameter.items.dataType + "]"; // TODO: what if parameter.items.dataType is itself a collection?
+
+This needs recursive handling to properly construct nested types. For example:
+- [[Int]] should be generated as [[Int]], not [[array]]
+- Map<Text, [Int]> should have proper type resolution
+- Nested types in model properties need similar handling
+
+Test these corner cases with OpenAPI specs that include:
+- Array of arrays
+- Maps with array values
+- Arrays of maps
+- Records/objects with nested container fields
+
+Related: AbstractJavaCodegen.java:1299 also notes nested containers aren't fully supported
