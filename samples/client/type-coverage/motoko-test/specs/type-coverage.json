@@ -1,0 +1,268 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Type Coverage Test API",
+    "version": "1.0.0",
+    "description": "Comprehensive test API for all Motoko type mappings"
+  },
+  "servers": [
+    {
+      "url": "https://example.com"
+    }
+  ],
+  "paths": {
+    "/all-types": {
+      "get": {
+        "operationId": "getAllTypes",
+        "summary": "Get object with all basic types",
+        "responses": {
+          "200": {
+            "description": "Object containing all supported types",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllTypes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix": {
+      "get": {
+        "operationId": "getMatrix",
+        "summary": "Get nested array (2D matrix)",
+        "responses": {
+          "200": {
+            "description": "A 2D array of integers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postMatrix",
+        "summary": "Send nested array in request body",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrays": {
+      "get": {
+        "operationId": "getArrays",
+        "summary": "Get object with various array types",
+        "responses": {
+          "200": {
+            "description": "Object with different array types",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArrayTypes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{id}": {
+      "get": {
+        "operationId": "getUserById",
+        "summary": "Get user by ID with query parameters",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "includeMetadata",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AllTypes": {
+        "type": "object",
+        "required": [
+          "textField",
+          "boolField",
+          "intField",
+          "floatField"
+        ],
+        "properties": {
+          "textField": {
+            "type": "string"
+          },
+          "charField": {
+            "type": "string",
+            "maxLength": 1
+          },
+          "boolField": {
+            "type": "boolean"
+          },
+          "intField": {
+            "type": "integer"
+          },
+          "longField": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "floatField": {
+            "type": "number",
+            "format": "float"
+          },
+          "doubleField": {
+            "type": "number",
+            "format": "double"
+          },
+          "dateField": {
+            "type": "string",
+            "format": "date"
+          },
+          "dateTimeField": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "passwordField": {
+            "type": "string",
+            "format": "password"
+          },
+          "binaryField": {
+            "type": "string",
+            "format": "binary"
+          },
+          "uuidField": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uriField": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "ArrayTypes": {
+        "type": "object",
+        "required": ["strings", "integers", "nested"],
+        "properties": {
+          "strings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "integers": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "floats": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "nested": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": ["id", "name", "email"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "age": {
+            "type": "integer"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

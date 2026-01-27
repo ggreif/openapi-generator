@@ -1,8 +1,8 @@
 generatorName: motoko
-outputDir: samples/client/nested-arrays/motoko-test/generated
-inputSpec: samples/client/nested-arrays/motoko-test/specs/nested-arrays.json
+outputDir: samples/client/type-coverage/motoko-test/generated
+inputSpec: samples/client/type-coverage/motoko-test/specs/type-coverage.json
 templateDir: modules/openapi-generator/src/main/resources/motoko
-artifactId: nested-arrays-client
+artifactId: type-coverage-client
 artifactVersion: 1.0.0
 additionalProperties:
   hideGenerationTimestamp: "true"
