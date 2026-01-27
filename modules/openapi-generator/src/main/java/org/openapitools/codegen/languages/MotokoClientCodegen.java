@@ -285,10 +285,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         }
 
         // Add Map import if needed
-        // TODO: Add end-to-end test for when OpenAPI spec contains a model named "Map"
-        //       Similar to "Text" and other primitives, it will need escaping/renaming to avoid
-        //       conflicts with the core library's Map type. Test should verify that user-defined
-        //       "Map" model gets properly escaped (e.g., "Map_") while Map<K,V> type works correctly.
+        // NOTE: Model name escaping is implemented in toModelName() and tested in
+        //       samples/client/type-coverage/motoko-test with a user-defined "Map" model.
+        //       User model "Map" is escaped to "Map_" while Map<K,V> refers to the core type.
         if (needsMapImport) {
             if (imports == null) {
                 imports = new ArrayList<>();
@@ -361,10 +360,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         }
 
         // Add Map import if needed
-        // TODO: Add end-to-end test for when OpenAPI spec contains a model named "Map"
-        //       Similar to "Text" and other primitives, it will need escaping/renaming to avoid
-        //       conflicts with the core library's Map type. Test should verify that user-defined
-        //       "Map" model gets properly escaped (e.g., "Map_") while Map<K,V> type works correctly.
+        // NOTE: Model name escaping is implemented in toModelName() and tested in
+        //       samples/client/type-coverage/motoko-test with a user-defined "Map" model.
+        //       User model "Map" is escaped to "Map_" while Map<K,V> refers to the core type.
         if (needsMapImport) {
             if (imports == null) {
                 imports = new ArrayList<>();
