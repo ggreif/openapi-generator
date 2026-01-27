@@ -269,11 +269,11 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 imports = new ArrayList<>();
                 objs.put("imports", imports);
             }
-            Map<String, String> mapImport = new HashMap<>();
-            mapImport.put("import", "Map");
-            mapImport.put("isMap", "true");
-            mapImport.put("isMappedType", "true");  // Prevent it from being imported as a model
-            imports.add(mapImport);
+            imports.add(Map.of(
+                "import", "Map",
+                "isMap", "true",
+                "isMappedType", "true"  // Prevent it from being imported as a model
+            ));
         }
 
         return objs;
@@ -345,12 +345,12 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 imports = new ArrayList<>();
                 result.put("imports", imports);
             }
-            Map<String, String> mapImport = new HashMap<>();
-            mapImport.put("import", "Map");
-            mapImport.put("classname", "Map");
-            mapImport.put("isMap", "true");
-            mapImport.put("isMappedType", "true");  // Prevent it from being imported as a model
-            imports.add(mapImport);
+            imports.add(Map.of(
+                "import", "Map",
+                "classname", "Map",
+                "isMap", "true",
+                "isMappedType", "true"  // Prevent it from being imported as a model
+            ));
         }
 
         return result;
