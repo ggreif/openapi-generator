@@ -202,7 +202,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
         // Fix dataType for arrays and maps that may have slipped through as bare types
         // This happens when the dataType is set before our getSchemaType is called
-        if ("array".equals(parameter.dataType) || "Array".equals(parameter.dataType)) { // TODO: is comparison agains "Array" necessary?
+        if ("array".equals(parameter.dataType)) {
             // Try to reconstruct the array type from the parameter
             if (parameter.isArray && parameter.items != null) {
                 // items is a CodegenProperty, not CodegenParameter - just use its dataType
@@ -291,7 +291,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         if (operations != null) {
             for (org.openapitools.codegen.CodegenOperation op : operations.getOperation()) {
                 // Fix return type if it's a bare "array"
-                if ("array".equals(op.returnType) || "Array".equals(op.returnType)) { // TODO: is comparison agains "Array" necessary?
+                if ("array".equals(op.returnType)) {
                     if (op.returnContainer != null && op.returnContainer.equals("array")) {
                         op.returnType = "[" + op.returnBaseType + "]";
                     }
