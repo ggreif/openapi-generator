@@ -138,6 +138,24 @@
           }
         }
       }
+    },
+    "/map-test": {
+      "get": {
+        "operationId": "getMapTest",
+        "summary": "Test model named 'Map' (name collision with Map<K,V>)",
+        "responses": {
+          "200": {
+            "description": "Custom Map model and actual map type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapTest"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -258,6 +276,33 @@
           "tags": {
             "type": "array",
             "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Map": {
+        "type": "object",
+        "required": ["key", "value"],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "MapTest": {
+        "type": "object",
+        "required": ["customMap", "metadata"],
+        "properties": {
+          "customMap": {
+            "$ref": "#/components/schemas/Map"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
               "type": "string"
             }
           }

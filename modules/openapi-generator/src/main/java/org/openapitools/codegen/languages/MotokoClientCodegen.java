@@ -53,7 +53,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             "continue", "debug", "do", "else", "false", "for", "func", "if",
             "in", "import", "module", "not", "null", "object", "or", "label",
             "let", "loop", "private", "public", "return", "shared", "switch",
-            "throw", "true", "try", "type", "var", "while", "with"
+            "throw", "true", "try", "type", "var", "while", "with",
+            // Core library types and primitives that could conflict with user-defined models
+            "Text", "Char", "Bool", "Int", "Float", "Blob", "Any", "Map"
         ));
 
         // Motoko language-specific primitives (don't need imports)
@@ -105,6 +107,15 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             setUseDfx(convertPropertyToBooleanAndWriteBack(USE_DFX));
         }
         additionalProperties.put(USE_DFX, useDfx);
+    }
+
+    @Override
+    public String escapeReservedWord(String name) {
+        // Escape reserved words and Motoko primitives/core types by appending underscore
+        if (this.reservedWordsMappings().containsKey(name)) {
+            return this.reservedWordsMappings().get(name);
+        }
+        return name + "_";
     }
 
     public void setProjectName(String projectName) {
