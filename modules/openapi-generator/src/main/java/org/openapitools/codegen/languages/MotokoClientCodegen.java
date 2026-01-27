@@ -64,28 +64,30 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
         // Motoko type mappings
         typeMapping.clear();
-        typeMapping.put("string", "Text");
-        typeMapping.put("char", "Char");
-        typeMapping.put("boolean", "Bool");
-        typeMapping.put("int", "Int");
-        typeMapping.put("integer", "Int");
-        typeMapping.put("long", "Int");
-        typeMapping.put("float", "Float");
-        typeMapping.put("double", "Float");
-        typeMapping.put("number", "Float");
-        typeMapping.put("date", "Text");
-        typeMapping.put("DateTime", "Text");
-        typeMapping.put("password", "Text");
-        typeMapping.put("file", "Blob");
-        typeMapping.put("binary", "Blob");
-        typeMapping.put("ByteArray", "Blob");
-        typeMapping.put("UUID", "Text");
-        typeMapping.put("URI", "Text");
-        typeMapping.put("array", "Array");  // Handled in getTypeDeclaration to produce [T] syntax
-        // Maps use the red-black tree based Map from core/pure/Map
-        // Using destructuring import to get Map type directly
-        typeMapping.put("map", "Map");
-        typeMapping.put("object", "Any");
+        typeMapping.putAll(Map.of(
+            "string", "Text",
+            "char", "Char",
+            "boolean", "Bool",
+            "int", "Int",
+            "integer", "Int",
+            "long", "Int",
+            "float", "Float",
+            "double", "Float",
+            "number", "Float",
+            "date", "Text"
+        ));
+        typeMapping.putAll(Map.of(
+            "DateTime", "Text",
+            "password", "Text",
+            "file", "Blob",
+            "binary", "Blob",
+            "ByteArray", "Blob",
+            "UUID", "Text",
+            "URI", "Text",
+            "array", "Array",  // Handled in getTypeDeclaration to produce [T] syntax
+            "map", "Map",  // Maps use the red-black tree based Map from core/pure/Map
+            "object", "Any"
+        ));
 
         cliOptions.add(CliOption.newString(PROJECT_NAME, "Project name for generated code"));
         cliOptions.add(CliOption.newBoolean(USE_DFX, "Generate code for dfx with ic:aaaaa-aa imports", useDfx));
