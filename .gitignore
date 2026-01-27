@@ -20,6 +20,9 @@ build/*
 generated-files/*
 generated-sources/*
 generated-code/*
+samples/client/*/motoko-test/.dfx/
+samples/client/*/motoko-test/.mops/
+samples/client/*/motoko-test/generated/
 *.swp
 *.swo
 target

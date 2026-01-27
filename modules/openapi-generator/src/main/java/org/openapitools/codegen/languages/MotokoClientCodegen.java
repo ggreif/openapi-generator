@@ -207,7 +207,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             if (parameter.isArray && parameter.items != null) {
                 // items is a CodegenProperty, not CodegenParameter - just use its dataType
                 String old = parameter.dataType;
-                parameter.dataType = "[" + parameter.items.dataType + "]"; // TODO: what if parameter.items.dataType is itself a collection?
+                parameter.dataType = "[" + parameter.items.dataType + "]";
             }
         }
     }
