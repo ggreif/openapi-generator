@@ -55,7 +55,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             "let", "loop", "private", "public", "return", "shared", "switch",
             "throw", "true", "try", "type", "var", "while", "with",
             // Core library types and primitives that could conflict with user-defined models
-            "Text", "Char", "Bool", "Int", "Float", "Blob", "Any", "Map"
+            // NOTE: Must be lowercase as isReservedWord() converts to lowercase before checking
+            "text", "char", "bool", "int", "float", "blob", "any", "map"
         ));
 
         // Motoko language-specific primitives (don't need imports)
@@ -118,6 +119,25 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         return name + "_";
     }
 
+    @Override
+    public String toModelName(String name) {
+        // Apply parent sanitization first
+        name = super.toModelName(name);
+
+        // Check if model name conflicts with reserved words or Motoko primitives
+        if (isReservedWord(name)) {
+            return escapeReservedWord(name);
+        }
+
+        return name;
+    }
+
+    @Override
+    public String toModelFilename(String name) {
+        // Filename should match the model name
+        return toModelName(name);
+    }
+
     public void setProjectName(String projectName) {
         this.projectName = projectName;
     }
@@ -132,14 +152,6 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
     public boolean getUseDfx() {
         return useDfx;
-    }
-
-    @Override
-    public String escapeReservedWord(String name) {
-        // Per Internet Computer IDL-Motoko spec:
-        // Reserved keywords are escaped by appending an underscore "_"
-        // See: https://github.com/dfinity/motoko/blob/master/design/IDL-Motoko.md
-        return name + "_";
     }
 
     @Override
