@@ -23,3 +23,55 @@ Test these corner cases with OpenAPI specs that include:
 - Records/objects with nested container fields
 
 Related: AbstractJavaCodegen.java:1299 also notes nested containers aren't fully supported
+
+REAL-WORLD EXAMPLES FOUND:
+
+1. **GeoJSON Specification (RFC 7946)** - PRIMARY EXAMPLE
+   - Most common use case for nested arrays in OpenAPI specs
+   - Has been driving nested array support since 2014
+
+   Examples:
+   - LineString coordinates: [[lon, lat, alt]] = array[array[number]]
+   - Polygon rings: [[[lon, lat]]] = array[array[array[number]]]
+   - MultiPolygon: [[[[lon, lat]]]] = array[array[array[array[number]]]]
+
+   Working OpenAPI definitions available at:
+   - https://gist.github.com/codan-telcikt/e1d59ccc9a3af83e083f1a514c84026c
+   - https://gist.github.com/zit0un/3ac0575eb0f3aabdc645c3faad47ab4a
+
+   Schema pattern for nested arrays:
+   type: array
+   items:
+     type: array
+     items:
+       type: array
+       items:
+         type: number
+
+2. **Stripe OpenAPI Spec** (github.com/stripe/openapi)
+   - Uses objects containing arrays (e.g., list responses with data arrays)
+   - Has arrays of complex objects with nested array fields
+   - Does NOT use direct array-of-arrays patterns
+   - Uses objects as intermediaries between array levels
+
+3. **Kubernetes API Spec**
+   - Explicitly restricts nested structures
+   - x-kubernetes-list-map-keys states: "no nesting supported"
+   - Uses flatter structures to avoid deep nesting
+
+IMPORTANT LIMITATIONS:
+- Nested arrays work in REQUEST/RESPONSE BODIES
+- Nested arrays DON'T work in QUERY PARAMETERS (no serialization rules)
+- OpenAPI 3.0+ supports nested arrays in schemas via repeated type:array + items
+
+TESTING RECOMMENDATION:
+Use a GeoJSON OpenAPI spec as the test case for nested container support.
+It's the most widely used real-world example and would validate:
+- Double nesting: LineString [[number]]
+- Triple nesting: MultiPolygon [[[number]]]
+- Arrays within objects (Feature with geometry.coordinates)
+
+References:
+- OAI Issue #40: github.com/OAI/OpenAPI-Specification/issues/40
+- OAI Discussion #3052: github.com/OAI/OpenAPI-Specification/discussions/3052
+- RFC 7946 GeoJSON: datatracker.ietf.org/doc/html/rfc7946
