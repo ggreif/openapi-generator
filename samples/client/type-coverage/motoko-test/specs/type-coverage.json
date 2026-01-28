@@ -27,6 +27,25 @@
             }
           }
         }
+      },
+      "post": {
+        "operationId": "postAllTypes",
+        "summary": "Send AllTypes object in request body",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllTypes"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Success, no content returned"
+          }
+        }
       }
     },
     "/matrix": {
