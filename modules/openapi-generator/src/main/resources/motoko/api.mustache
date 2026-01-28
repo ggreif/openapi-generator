@@ -50,9 +50,7 @@ module {
         body : Blob;
     };
 
-    let managementCanister = actor "aaaaa-aa" : actor {
-        http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload;
-    };
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
 
 {{/useDfx}}
 {{#operations}}
@@ -82,7 +80,7 @@ module {
 
         // Call the management canister's http_request method with cycles
         // 30M cycles should be sufficient for most requests
-        {{#returnType}}let response : CanisterHttpResponsePayload = {{/returnType}}{{^returnType}}ignore {{/returnType}}await (with cycles = 30_000_000_000) {{#useDfx}}http_request{{/useDfx}}{{^useDfx}}managementCanister.http_request{{/useDfx}}(request);
+        {{#returnType}}let response : CanisterHttpResponsePayload = {{/returnType}}{{^returnType}}ignore {{/returnType}}await (with cycles = 30_000_000_000) http_request(request);
 
         {{#returnType}}
         // Parse JSON response
