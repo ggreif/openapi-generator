@@ -275,7 +275,6 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                                             typeMapping.containsValue(importName) ||
                                             languageSpecificPrimitives.contains(importName) ||
                                             importName.startsWith("[") ||
-                                            importName.contains(".") ||  // Filter out type references like "Map.Map"
                                             importName.contains("<");     // Filter out parameterized types like "Map<Text, Int>"
                     if (isMappedType) {
                         im.put("isMappedType", "true");
@@ -349,7 +348,6 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 if (className != null) {
                     boolean isMappedType = typeMapping.containsKey(className) ||
                                             className.startsWith("[") ||
-                                            className.contains(".") ||  // Filter out type references like "Map.Map"
                                             className.contains("<");     // Filter out parameterized types like "Map<Text, Int>"
                     // In Mustache, only add the key if it's true (for conditional sections)
                     if (isMappedType) {
