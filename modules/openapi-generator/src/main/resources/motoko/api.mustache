@@ -29,21 +29,19 @@ module {
         #get;
         #head;
         #post;
-        #put;
-        #delete;
-        #patch;
     };
 
     type CanisterHttpRequestArgument = {
         url : Text;
         max_response_bytes : ?Nat64;
+        method : HttpMethod;
         headers : [HttpHeader];
         body : ?Blob;
-        method : HttpMethod;
         transform : ?{
             function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
             context : Blob;
         };
+        is_replicated : ?Bool;
     };
 
     type CanisterHttpResponsePayload = {
@@ -69,40 +67,22 @@ module {
         let url = baseUrl # "{{path}}"{{#pathParams}}
             |> Text.replace(_, #text "{{=<% %>=}}{<%baseName%>}<%={{ }}=%>", {{#isString}}{{paramName}}{{/isString}}{{^isString}}{{#isInteger}}Int.toText({{paramName}}){{/isInteger}}{{^isInteger}}debug_show({{paramName}}){{/isInteger}}{{/isString}}){{/pathParams}};
 
-        {{#useDfx}}
         let request : CanisterHttpRequestArgument = {
             url = url;
             max_response_bytes = null;
+            method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
             headers = [
                 { name = "Content-Type"; value = "application/json" }{{#headerParams}},
                 { name = "{{baseName}}"; value = {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}} }{{/headerParams}}
             ];
             body = {{#bodyParam}}do ? { let candidBlob = to_candid({{paramName}}); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) }{{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
-            method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
             transform = null;
+            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
         // 30M cycles should be sufficient for most requests
-        {{#returnType}}let response : CanisterHttpResponsePayload = {{/returnType}}{{^returnType}}ignore {{/returnType}}await (with cycles = 30_000_000_000) http_request(request);
-        {{/useDfx}}
-        {{^useDfx}}
-        let request : CanisterHttpRequestArgument = {
-            url = url;
-            max_response_bytes = null;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }{{#headerParams}},
-                { name = "{{baseName}}"; value = {{#isString}}{{paramName}}{{/isString}}{{^isString}}debug_show({{paramName}}){{/isString}} }{{/headerParams}}
-            ];
-            body = {{#bodyParam}}do ? { let candidBlob = to_candid({{paramName}}); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) }{{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
-            method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
-            transform = null;
-        };
-
-        // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        {{#returnType}}let response : CanisterHttpResponsePayload = {{/returnType}}{{^returnType}}ignore {{/returnType}}await (with cycles = 30_000_000_000) managementCanister.http_request(request);
-        {{/useDfx}}
+        {{#returnType}}let response : CanisterHttpResponsePayload = {{/returnType}}{{^returnType}}ignore {{/returnType}}await (with cycles = 30_000_000_000) {{#useDfx}}http_request{{/useDfx}}{{^useDfx}}managementCanister.http_request{{/useDfx}}(request);
 
         {{#returnType}}
         // Parse JSON response
