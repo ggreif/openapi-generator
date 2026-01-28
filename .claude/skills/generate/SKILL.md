@@ -31,14 +31,22 @@ This skill helps generate Motoko client code from OpenAPI specifications and ver
 
 3. **Typecheck generated files**:
 
-   **Primary method** - Use `mops` to manage dependencies and typecheck:
+   **Primary method** - Use the generated convenience script:
    ```bash
    cd samples/client/<spec-name>/motoko
 
    # Install dependencies (first time or after mops.toml changes)
    npx ic-mops install
 
-   # Get package flags from mops and typecheck all files
+   # Run typecheck script
+   ./typecheck.sh
+   ```
+
+   The `typecheck.sh` script is automatically generated and uses `mops` to manage dependencies and typecheck all files. It provides a nice summary with checkmarks for each file.
+
+   **Manual method** - If you need to typecheck manually:
+   ```bash
+   cd samples/client/<spec-name>/motoko
    PACKAGE_FLAGS=$(npx ic-mops sources)
    for file in Models/*.mo Apis/*.mo; do
      echo "Checking $file..."
@@ -46,9 +54,7 @@ This skill helps generate Motoko client code from OpenAPI specifications and ver
    done
    ```
 
-   Or use the convenience script if available: `./typecheck.sh`
-
-   This approach uses the real `serde` library with all dependencies managed by mops.
+   Both approaches use the real `serde` library with all dependencies managed by mops.
 
    **Alternative** - Quick typechecking with vendored stub (from repo root):
    ```bash
