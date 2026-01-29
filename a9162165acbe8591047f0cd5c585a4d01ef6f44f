@@ -8,16 +8,14 @@ Production code should use the real mo:serde implementation.
 
 ---
 
-TODO: Re-add Motoko generated samples to git
+DONE: Re-add Motoko generated samples to git
 
-Currently in .gitignore per policy "not ready for commit yet".
-When the Motoko generator is stable and production-ready:
+✅ Completed in commit 29e2dda01ec
+- Removed motoko/ entries from .gitignore
+- Added samples/client/petstore/motoko* to git
+- Committed as reference implementations
 
-1. Remove motoko/ entries from .gitignore
-2. git add samples/client/petstore/motoko*
-3. Commit as reference implementations
-
-Keep samples in sync with template changes going forward.
+Going forward: Keep samples in sync with template changes.
 
 ---
 
