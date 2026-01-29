@@ -16,7 +16,7 @@ module {
             |> Text.replace(_, #text "{orderId}", orderId);
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #delete;
             headers = [
@@ -39,7 +39,7 @@ module {
         let url = baseUrl # "/store/inventory";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #get;
             headers = [
@@ -79,7 +79,7 @@ module {
             |> Text.replace(_, #text "{orderId}", debug_show(orderId));
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #get;
             headers = [
@@ -118,7 +118,7 @@ module {
         let url = baseUrl # "/store/order";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #post;
             headers = [

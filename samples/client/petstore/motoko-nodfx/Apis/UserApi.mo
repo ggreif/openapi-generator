@@ -47,7 +47,7 @@ module {
         let url = baseUrl # "/user";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #post;
             headers = [
@@ -70,7 +70,7 @@ module {
         let url = baseUrl # "/user/createWithArray";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #post;
             headers = [
@@ -93,7 +93,7 @@ module {
         let url = baseUrl # "/user/createWithList";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #post;
             headers = [
@@ -117,7 +117,7 @@ module {
             |> Text.replace(_, #text "{username}", username);
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #delete;
             headers = [
@@ -141,7 +141,7 @@ module {
             |> Text.replace(_, #text "{username}", username);
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #get;
             headers = [
@@ -180,7 +180,7 @@ module {
         let url = baseUrl # "/user/login";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #get;
             headers = [
@@ -219,7 +219,7 @@ module {
         let url = baseUrl # "/user/logout";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #get;
             headers = [
@@ -243,7 +243,7 @@ module {
             |> Text.replace(_, #text "{username}", username);
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #put;
             headers = [

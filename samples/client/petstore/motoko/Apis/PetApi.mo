@@ -15,7 +15,7 @@ module {
         let url = baseUrl # "/pet";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #post;
             headers = [
@@ -55,7 +55,7 @@ module {
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #delete;
             headers = [
@@ -79,7 +79,7 @@ module {
         let url = baseUrl # "/pet/findByStatus";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #get;
             headers = [
@@ -118,7 +118,7 @@ module {
         let url = baseUrl # "/pet/findByTags";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #get;
             headers = [
@@ -158,7 +158,7 @@ module {
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #get;
             headers = [
@@ -197,7 +197,7 @@ module {
         let url = baseUrl # "/pet";
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #put;
             headers = [
@@ -237,7 +237,7 @@ module {
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #post;
             headers = [
@@ -261,7 +261,7 @@ module {
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
         let request : CanisterHttpRequestArgument = {
-            url = url;
+            url;
             max_response_bytes = null;
             method = #post;
             headers = [
