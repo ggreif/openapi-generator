@@ -91,6 +91,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             "map", "Map",  // Maps use the red-black tree based Map from core/pure/Map
             "object", "Any"
         ));
+        // Map AnyType (from additionalProperties/free-form objects) to Text as a placeholder
+        // TODO: Better support for additionalProperties - see related TODO in postProcessModels
+        typeMapping.put("AnyType", "Text");
 
         cliOptions.add(CliOption.newString(PROJECT_NAME, "Project name for generated code"));
         cliOptions.add(CliOption.newBoolean(USE_DFX, "Generate code for dfx with ic:aaaaa-aa imports", useDfx));
@@ -271,11 +274,15 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 String importName = im.get("import");
                 // Check if this import is a primitive/mapped type or array/map type
                 if (importName != null) {
+                    // TODO: Support additionalProperties by modeling as Map<Text, Text> or similar
+                    //   Currently schemas with additionalProperties: true are not fully supported.
+                    //   Future work: Add a field like "additionalProperties: ?Map<Text, Text>" to models.
                     boolean isMappedType = typeMapping.containsKey(importName) ||
                                             typeMapping.containsValue(importName) ||
                                             languageSpecificPrimitives.contains(importName) ||
                                             importName.startsWith("[") ||
-                                            importName.contains("<");     // Filter out parameterized types like "Map<Text, Int>"
+                                            importName.contains("<") ||     // Filter out parameterized types like "Map<Text, Int>"
+                                            "AnyType".equals(importName);   // Filter out AnyType - not yet implemented
                     if (isMappedType) {
                         im.put("isMappedType", "true");
                     }
@@ -358,7 +365,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 if (className != null) {
                     boolean isMappedType = typeMapping.containsKey(className) ||
                                             className.startsWith("[") ||
-                                            className.contains("<");     // Filter out parameterized types like "Map<Text, Int>"
+                                            className.contains("<") ||     // Filter out parameterized types like "Map<Text, Int>"
+                                            "AnyType".equals(className);   // Filter out AnyType - not yet implemented
                     // In Mustache, only add the key if it's true (for conditional sections)
                     if (isMappedType) {
                         im.put("isMappedType", "true");
