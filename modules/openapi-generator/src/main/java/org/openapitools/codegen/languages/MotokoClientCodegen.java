@@ -306,6 +306,16 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
 
+        // TODO: Authentication is missing - need to add support for:
+        //   - OAuth 2.0 tokens in Authorization header
+        //   - API keys in headers/query parameters
+        //   - Other auth schemes defined in OpenAPI security definitions
+
+        // TODO: Response code processing is missing - need to add support for:
+        //   - Handling different HTTP response codes (200, 400, 401, 404, etc.)
+        //   - Mapping response codes to appropriate error handling
+        //   - Parsing error responses and throwing appropriate exceptions
+
         // Check if we need to import Map
         boolean needsMapImport = false;
 
