@@ -29,6 +29,11 @@ module {
         #get;
         #head;
         #post;
+        // TODO: IC HTTP outcalls currently only support GET, HEAD, and POST.
+        //   PUT and DELETE methods are not yet supported by the management canister.
+        //   Once support is added, uncomment these:
+        // #put;
+        // #delete;
     };
 
     type CanisterHttpRequestArgument = {
