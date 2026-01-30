@@ -1,0 +1,356 @@
+# Implementation Plan: httpbin.org Integration for Non-404 Error Testing
+
+## Overview
+Add httpbin.org endpoints to the existing JSONPlaceholder test spec to enable testing of HTTP 500 and 503 error responses. This demonstrates that the error handling implementation works correctly for all error status codes, not just 404.
+
+## Problem Statement
+- JSONPlaceholder only returns 404 errors in normal operation
+- Need to test 500 (Internal Server Error) and 503 (Service Unavailable) responses
+- Current error handling code (lines 128-165 in api.mustache) supports these codes but they're untested
+- httpbin.org provides `/status/{code}` endpoint that returns any specified status code
+
+## Implementation Strategy - Option B: Add httpbin.org Endpoints to JSONPlaceholder Spec
+
+**Rationale:**
+- Keeps all tests in one place (jsonplaceholder sample)
+- Minimal changes required
+- Demonstrates cross-service testing in a single spec
+- Shows OpenAPI generator can handle multiple base URLs
+
+**Approach:**
+1. Add new httpbin.org endpoints to jsonplaceholder-posts.json
+2. Add test functions to main.mo for 500 and 503 errors
+3. Update deploy.sh with new test cases
+4. Regenerate client and verify error handling
+
+## Detailed Changes
+
+### 1. Update OpenAPI Spec: jsonplaceholder-posts.json
+
+**Location:** `/Users/ggreif/openapi-generator/samples/client/jsonplaceholder/motoko-test/specs/jsonplaceholder-posts.json`
+
+Add three new endpoints for httpbin.org status code testing:
+
+```json
+"/httpbin-status/500": {
+  "get": {
+    "operationId": "getStatus500",
+    "summary": "Get HTTP 500 error from httpbin.org (for testing error handling)",
+    "servers": [
+      {
+        "url": "https://httpbin.org"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Success (should never happen)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "500": {
+        "description": "Internal Server Error"
+      }
+    }
+  }
+},
+"/httpbin-status/503": {
+  "get": {
+    "operationId": "getStatus503",
+    "summary": "Get HTTP 503 error from httpbin.org (for testing error handling)",
+    "servers": [
+      {
+        "url": "https://httpbin.org"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Success (should never happen)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "503": {
+        "description": "Service Unavailable"
+      }
+    }
+  }
+},
+"/httpbin-status/200": {
+  "get": {
+    "operationId": "getStatus200",
+    "summary": "Get HTTP 200 success from httpbin.org (control test)",
+    "servers": [
+      {
+        "url": "https://httpbin.org"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Successful response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Note:** The `servers` field at operation level overrides the global servers field, directing these requests to httpbin.org instead of jsonplaceholder.typicode.com.
+
+### 2. Add Test Functions to main.mo
+
+**Location:** `/Users/ggreif/openapi-generator/samples/client/jsonplaceholder/motoko-test/src/main.mo`
+
+Add three new test functions after the existing tests:
+
+```motoko
+// Test endpoint 8: Test HTTP 500 error from httpbin.org
+public func testGetStatus500() : async Text {
+  Debug.print("Calling GET /httpbin-status/500 (expecting 500 error)...");
+  try {
+    let _ = await api.getStatus500();
+    "ERROR: Expected 500 but request succeeded"
+  } catch (err) {
+    let errorMsg = Error.message(err);
+    Debug.print("Caught expected error: " # errorMsg);
+    if (Text.contains(errorMsg, #text "500")) {
+      "SUCCESS: Caught expected 500 error - " # errorMsg
+    } else {
+      "WARNING: Caught error but not 500 - " # errorMsg
+    }
+  }
+};
+
+// Test endpoint 9: Test HTTP 503 error from httpbin.org
+public func testGetStatus503() : async Text {
+  Debug.print("Calling GET /httpbin-status/503 (expecting 503 error)...");
+  try {
+    let _ = await api.getStatus503();
+    "ERROR: Expected 503 but request succeeded"
+  } catch (err) {
+    let errorMsg = Error.message(err);
+    Debug.print("Caught expected error: " # errorMsg);
+    if (Text.contains(errorMsg, #text "503")) {
+      "SUCCESS: Caught expected 503 error - " # errorMsg
+    } else {
+      "WARNING: Caught error but not 503 - " # errorMsg
+    }
+  }
+};
+
+// Test endpoint 10: Test HTTP 200 from httpbin.org (control test)
+public func testGetStatus200() : async Text {
+  Debug.print("Calling GET /httpbin-status/200 (expecting success)...");
+  try {
+    let response = await api.getStatus200();
+    Debug.print("Success: Received 200 response from httpbin.org");
+    "SUCCESS: Received 200 response - " # debug_show(response)
+  } catch (err) {
+    let errorMsg = Error.message(err);
+    Debug.print("Unexpected error: " # errorMsg);
+    "ERROR: Expected 200 but got error - " # errorMsg
+  }
+};
+```
+
+### 3. Update Deployment Script: deploy.sh
+
+**Location:** `/Users/ggreif/openapi-generator/samples/client/jsonplaceholder/motoko-test/deploy.sh`
+
+Add three new test cases after the existing tests (after line 83):
+
+```bash
+# Test HTTP 500 error from httpbin.org
+echo ""
+echo "8. Testing GET /httpbin-status/500 (expects 500 error)..."
+dfx canister call api_test testGetStatus500
+
+# Test HTTP 503 error from httpbin.org
+echo ""
+echo "9. Testing GET /httpbin-status/503 (expects 503 error)..."
+dfx canister call api_test testGetStatus503
+
+# Test HTTP 200 from httpbin.org (control test)
+echo ""
+echo "10. Testing GET /httpbin-status/200 (expects success)..."
+dfx canister call api_test testGetStatus200
+```
+
+## OpenAPI Generator Behavior
+
+**Operation-Level Servers Override:**
+The OpenAPI 3.0 spec supports operation-level `servers` arrays that override the global servers. The generator should:
+1. Use `https://httpbin.org` as base URL for httpbin endpoints
+2. Use `https://jsonplaceholder.typicode.com` for JSONPlaceholder endpoints
+3. Generate correct URLs in DefaultApi.mo
+
+**Expected Generated Code (DefaultApi.mo):**
+```motoko
+public func getStatus500(config : Config__) : async* () {
+  let {baseUrl; accessToken; cycles} = config;
+  // baseUrl should be overridden to "https://httpbin.org" for this operation
+  let url = baseUrl # "/httpbin-status/500";
+
+  // ... HTTP request ...
+
+  // Error handling for 500
+  if (response.status == 500) {
+    throw Error.reject("HTTP 500: Internal Server Error");
+  };
+}
+```
+
+## Files to Modify
+
+### Primary Changes
+1. [jsonplaceholder-posts.json](samples/client/jsonplaceholder/motoko-test/specs/jsonplaceholder-posts.json)
+   - Add `/httpbin-status/500` endpoint
+   - Add `/httpbin-status/503` endpoint
+   - Add `/httpbin-status/200` endpoint (control test)
+
+2. [main.mo](samples/client/jsonplaceholder/motoko-test/src/main.mo)
+   - Add `testGetStatus500()` function
+   - Add `testGetStatus503()` function
+   - Add `testGetStatus200()` function
+
+3. [deploy.sh](samples/client/jsonplaceholder/motoko-test/deploy.sh)
+   - Add test 8: HTTP 500 error
+   - Add test 9: HTTP 503 error
+   - Add test 10: HTTP 200 success (control)
+
+### Files to Regenerate
+4. [DefaultApi.mo](samples/client/jsonplaceholder/motoko-test/generated/Apis/DefaultApi.mo)
+   - Regenerated with new httpbin endpoints
+
+## Implementation Steps
+
+### 1. Update OpenAPI Spec
+```bash
+cd /Users/ggreif/openapi-generator/samples/client/jsonplaceholder/motoko-test
+# Edit specs/jsonplaceholder-posts.json to add three httpbin endpoints
+```
+
+### 2. Regenerate Client
+```bash
+cd /Users/ggreif/openapi-generator
+./samples/client/jsonplaceholder/motoko-test/generate.sh
+```
+
+### 3. Update Test Files
+```bash
+# Edit src/main.mo to add three test functions
+# Edit deploy.sh to add three test cases
+```
+
+### 4. Deploy and Test
+```bash
+cd /Users/ggreif/openapi-generator/samples/client/jsonplaceholder/motoko-test
+./deploy.sh
+```
+
+## Verification Steps
+
+### 1. Check Generated Code
+Verify [DefaultApi.mo](samples/client/jsonplaceholder/motoko-test/generated/Apis/DefaultApi.mo) contains:
+- `getStatus500()` function with error handling for status 500
+- `getStatus503()` function with error handling for status 503
+- `getStatus200()` function that returns successfully
+- Correct base URLs for each operation
+
+### 2. Test Error Scenarios
+Expected output from deploy.sh:
+```
+8. Testing GET /httpbin-status/500 (expects 500 error)...
+("SUCCESS: Caught expected 500 error - HTTP 500: Internal Server Error")
+
+9. Testing GET /httpbin-status/503 (expects 503 error)...
+("SUCCESS: Caught expected 503 error - HTTP 503: Service Unavailable")
+
+10. Testing GET /httpbin-status/200 (expects success)...
+("SUCCESS: Received 200 response - {...}")
+```
+
+### 3. Verify Error Messages
+All error messages should:
+- Include status code (e.g., "HTTP 500")
+- Include description from OpenAPI spec
+- Be caught by try-catch blocks in test functions
+
+### 4. Stage Files (Only After All Tests Pass)
+```bash
+git add samples/client/jsonplaceholder/motoko-test/specs/jsonplaceholder-posts.json
+git add samples/client/jsonplaceholder/motoko-test/src/main.mo
+git add samples/client/jsonplaceholder/motoko-test/deploy.sh
+git add samples/client/jsonplaceholder/motoko-test/generated/
+```
+
+## Alternative Approaches Considered
+
+### Option A: Separate httpbin Sample
+**Pros:**
+- Complete separation of concerns
+- Full httpbin.org API coverage
+
+**Cons:**
+- Duplicate boilerplate (deploy.sh, dfx.json, mops.toml)
+- More maintenance overhead
+- Doesn't demonstrate cross-service testing
+
+**Rejected:** Too much overhead for simple error testing
+
+### Option C: Minimal Test (Single 500 Endpoint)
+**Pros:**
+- Absolute minimum changes
+- Proves error handling works
+
+**Cons:**
+- Doesn't test all error codes
+- No control test (200 success)
+- Less thorough validation
+
+**Rejected:** Not comprehensive enough
+
+## Success Criteria
+
+✅ OpenAPI spec includes httpbin.org endpoints
+✅ Generated client contains getStatus500(), getStatus503(), getStatus200()
+✅ Error handling code executes for 500 and 503 status codes
+✅ Test functions catch and validate error messages
+✅ Control test (200) succeeds without errors
+✅ All tests pass in deploy.sh
+✅ Error messages include status codes and descriptions
+✅ Demonstrates that error handling works for all HTTP error codes, not just 404
+
+## Notes
+
+- httpbin.org is a stable, well-maintained service for HTTP testing
+- The `/status/{code}` endpoint reliably returns the specified status code
+- This approach demonstrates OpenAPI's operation-level servers override feature
+- All existing JSONPlaceholder tests remain unchanged
+- The implementation proves that the error handling code from the previous commit works correctly for all error status codes
+
+## Related Commits
+
+- 3463963b641: HTTP Response Code Processing implementation
+- 20bd31d3263: Added /nonexistent endpoint for 404 testing
+- 81cd868cc14: Added high ID and negative ID tests
+- bde0cd2f994: Changed parameter type to string for type-unsafe testing
