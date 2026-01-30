@@ -68,6 +68,7 @@ module {
             function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
             context : Blob;
         };
+        is_replicated : ?Bool;
     };
 {{#operation}}
     {{#summary}}
@@ -99,7 +100,6 @@ module {
             method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
             headers;
             body = {{#bodyParam}}do ? { let candidBlob = to_candid({{paramName}}); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) }{{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
