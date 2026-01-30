@@ -12,7 +12,7 @@ persistent actor {
 
   // Instantiate the API client with base URL and no access token
   transient let api = DefaultApi({
-    baseUrl = baseUrl;
+    baseUrl;
     accessToken = null;
   });
 

@@ -18,7 +18,6 @@ import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; typ
 {{/imports}}
 
 module {
-    public module class {{classname}}({baseUrl : Text; accessToken : ?Text}) {
 {{^useDfx}}
     // Management Canister interface for HTTP outcalls
     // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
@@ -68,7 +67,8 @@ module {
     {{#notes}}
     /// {{{notes}}}
     {{/notes}}
-    public func {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async {{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}(){{/returnType}} {
+    public func {{operationId}}(config : {baseUrl : Text; accessToken : ?Text}{{#allParams}}, {{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async* {{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}(){{/returnType}} {
+        let {baseUrl; accessToken} = config;
         let url = baseUrl # "{{path}}"{{#pathParams}}
             |> Text.replace(_, #text "{{=<% %>=}}{<%baseName%>}<%={{ }}=%>", {{#isString}}{{paramName}}{{/isString}}{{^isString}}{{#isInteger}}Int.toText({{paramName}}){{/isInteger}}{{^isInteger}}debug_show({{paramName}}){{/isInteger}}{{/isString}}){{/pathParams}};
 
@@ -118,6 +118,30 @@ module {
         }
         {{/returnType}}
     };
+
+{{/operation}}
+{{/operations}}
+
+    let operations = {
+{{#operations}}
+{{#operation}}
+        {{operationId}};
+{{/operation}}
+{{/operations}}
+    };
+
+    public module class {{classname}}(config : {baseUrl : Text; accessToken : ?Text}) {
+{{#operations}}
+{{#operation}}
+        {{#summary}}
+        /// {{{summary}}}
+        {{/summary}}
+        {{#notes}}
+        /// {{{notes}}}
+        {{/notes}}
+        public func {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async {{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}(){{/returnType}} {
+            await* operations.{{operationId}}(config{{#allParams}}, {{paramName}}{{/allParams}})
+        };
 
 {{/operation}}
 {{/operations}}
