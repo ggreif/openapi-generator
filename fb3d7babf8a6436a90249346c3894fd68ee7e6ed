@@ -1,0 +1,7 @@
+---
+✅ RESOLVED: Completed in commit fb3d7babf8a
+All verification steps passed:
+- Generated code for Spotify and JSONPlaceholder samples
+- Both samples typecheck successfully
+- JSONPlaceholder deploys successfully
+- HTTP response codes properly mapped to throwable Errors
