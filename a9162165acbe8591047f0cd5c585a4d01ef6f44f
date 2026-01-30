@@ -52,3 +52,17 @@ Beyond petstore, test generator with:
 - Internet Computer API specs (if available)
 
 Identify and fix edge cases in production APIs.
+
+---
+
+UPDATE: Real-world API testing progress
+
+✅ Tested with:
+- Spotify API: Complex nested objects, multiple error response codes (401, 403, 429)
+- JSONPlaceholder API: Simple REST endpoints, successful deployment verification
+
+Still TODO:
+- GitHub API (complex nested objects, pagination)
+- Stripe API (extensive use of discriminators)
+- OpenAI API (large enum types)
+- Internet Computer API specs (if available)
