@@ -1,0 +1,257 @@
+# Implementation Plan: HTTP Response Code to Error Mapping
+
+## Overview
+Add proper HTTP response code processing to the Motoko OpenAPI generator. Currently, the `response.status` field is ignored, and all responses are parsed as success cases. This plan implements status code checking and maps error responses (4xx, 5xx) to throwable Motoko Errors according to the OpenAPI specification.
+
+## Problem Statement
+- `response.status : Nat` is available but completely unused (api.mustache:107)
+- All HTTP responses (success or error) attempt to parse as the expected return type
+- Error response models are generated (e.g., `GetAnAlbum401Response`, `ErrorObject`) but never used
+- No differentiation between 200, 401, 404, 500, etc.
+- TODO comment exists in MotokoClientCodegen.java (lines 321-324) noting this gap
+
+## Implementation Strategy
+
+### 1. Add Status Code Checking in api.mustache
+
+**Location:** Lines 107-126 in [api.mustache](modules/openapi-generator/src/main/resources/motoko/api.mustache)
+
+**Current behavior:**
+```motoko
+let response = await (with cycles) http_request(request);
+// Immediately parses response.body without checking response.status
+```
+
+**New behavior:**
+```motoko
+let response = await (with cycles) http_request(request);
+// Check response.status FIRST
+if (response.status >= 200 and response.status < 300) {
+    // Parse as success response
+} else {
+    // Parse as error response and throw
+}
+```
+
+### 2. Error Response Parsing Strategy
+
+For each error response defined in OpenAPI spec:
+1. Check if `response.status` matches the defined error code
+2. Attempt to parse the error response body using the generated error model
+3. If parsing succeeds, include structured error details in the thrown error
+4. If parsing fails or no error model exists, include raw response text
+5. Always include HTTP status code in error message
+
+**Error Message Format:**
+```
+HTTP [CODE]: [DESCRIPTION] - [ERROR_DETAILS]
+```
+
+Examples:
+- `HTTP 401: Bad or expired token - { status = 401; message = "Token expired" }`
+- `HTTP 404: Album not found`
+- `HTTP 500: Unexpected error - {"error": "Internal server error"}`
+
+### 3. Template Changes Detail
+
+Replace lines 107-126 in api.mustache with:
+
+```motoko
+{{#returnType}}let response : CanisterHttpResponsePayload = {{/returnType}}{{^returnType}}ignore {{/returnType}}await (with cycles) http_request(request);
+
+{{#returnType}}
+// Check HTTP status code before parsing
+if (response.status >= 200 and response.status < 300) {
+    // Success response (2xx): parse as expected return type
+    let responseText = switch (Text.decodeUtf8(response.body)) {
+        case (?text) text;
+        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+    };
+
+    let jsonBlob = switch (JSON.fromText(responseText, null)) {
+        case (#ok(blob)) blob;
+        case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+    };
+
+    let result : ?{{{returnType}}} = from_candid(jsonBlob);
+    switch (result) {
+        case (?value) value;
+        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to {{{returnType}}}");
+    }
+} else {
+    // Error response (4xx, 5xx): parse error models and throw
+    let responseText = switch (Text.decodeUtf8(response.body)) {
+        case (?text) text;
+        case null "";  // Empty body for some errors (e.g., 404)
+    };
+
+    {{#responses}}
+    {{^is2xx}}
+    {{#dataType}}
+    // Try parsing {{code}} response as {{{dataType}}}
+    if (response.status == {{code}}) {
+        let errorDetail = if (responseText != "") {
+            switch (JSON.fromText(responseText, null)) {
+                case (#ok(blob)) {
+                    let parsed : ?{{{dataType}}} = from_candid(blob);
+                    switch (parsed) {
+                        case (?err) " - " # debug_show(err);
+                        case null " - " # responseText;
+                    };
+                };
+                case (#err(_)) " - " # responseText;
+            };
+        } else { "" };
+        throw Error.reject("HTTP {{code}}: {{message}}" # errorDetail);
+    };
+    {{/dataType}}
+    {{^dataType}}
+    // {{code}}: {{message}} (no response body model defined)
+    if (response.status == {{code}}) {
+        throw Error.reject("HTTP {{code}}: {{message}}");
+    };
+    {{/dataType}}
+    {{/is2xx}}
+    {{/responses}}
+
+    // Fallback for status codes not defined in OpenAPI spec
+    throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+        (if (responseText != "") { " - " # responseText } else { "" }));
+}
+{{/returnType}}
+```
+
+**Key Mustache Variables Used:**
+- `{{#responses}}` - Iterate all defined responses
+- `{{^is2xx}}` - Filter to only non-2xx responses
+- `{{code}}` - HTTP status code (e.g., "401", "404")
+- `{{message}}` - Description from OpenAPI spec
+- `{{dataType}}` - Error response type (e.g., "GetAnAlbum401Response")
+
+### 4. Update MotokoClientCodegen.java
+
+**Location:** Lines 321-324 in [MotokoClientCodegen.java](modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/MotokoClientCodegen.java)
+
+**Change:** Remove/update the TODO comment:
+
+```java
+// Before (lines 321-324):
+// TODO: Response code processing is missing - need to add support for:
+//   - Handling different HTTP response codes (200, 400, 401, 404, etc.)
+//   - Mapping response codes to appropriate error handling
+//   - Parsing error responses and throwing appropriate exceptions
+
+// After:
+// Response code processing is implemented in api.mustache template
+// - HTTP status codes are checked before parsing (2xx vs 4xx/5xx)
+// - Error responses use generated error models when available
+// - Structured error details are included in thrown errors
+```
+
+## Edge Cases Handled
+
+1. **No error responses defined in spec** - Falls back to generic error with status code
+2. **Default/wildcard responses** - Handled by fallback case
+3. **204 No Content** - Handled correctly by range check (200-299)
+4. **Error response without body model** - Uses simple error message without parsing
+5. **Undefined status codes** - Fallback includes status code and raw response text
+6. **Error response parsing failure** - Gracefully falls back to raw response text
+7. **Empty error response body** - Omits the detail section in error message
+
+## Files to Modify
+
+### Primary Changes
+1. [api.mustache](modules/openapi-generator/src/main/resources/motoko/api.mustache) - Lines 107-126
+   - Add status code checking logic
+   - Branch between success and error parsing
+   - Generate error-specific parsing for each defined error response
+
+2. [MotokoClientCodegen.java](modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/MotokoClientCodegen.java) - Lines 321-324
+   - Update TODO comment to reflect implementation
+
+### Files to Regenerate (for testing)
+3. [samples/client/spotify/motoko/generated/Apis/AlbumsApi.mo](samples/client/spotify/motoko/generated/Apis/AlbumsApi.mo)
+4. [samples/client/spotify/motoko/generated/Apis/PlayerApi.mo](samples/client/spotify/motoko/generated/Apis/PlayerApi.mo)
+5. Other generated API files in samples/
+
+## Git Workflow
+
+### Store Plan as Git Note
+Before implementation, save this plan as a git note:
+```bash
+git notes --ref=planning add -m "$(cat /Users/ggreif/.claude/plans/moonlit-skipping-catmull.md)"
+```
+
+### Staging Policy
+- **ONLY stage modified files when ALL tests pass successfully**
+- **DO NOT commit** - User will commit manually
+- Modified files to stage (after successful tests):
+  - `modules/openapi-generator/src/main/resources/motoko/api.mustache`
+  - `modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/MotokoClientCodegen.java`
+
+## Verification Steps
+
+### 1. Build the Generator
+```bash
+cd modules/openapi-generator
+mvn clean install -DskipTests
+```
+
+### 2. Regenerate Spotify Sample
+```bash
+./bin/generate-samples.sh spotify-motoko
+```
+
+### 3. Verify Generated Code
+Check that [AlbumsApi.mo](samples/client/spotify/motoko/generated/Apis/AlbumsApi.mo) contains:
+- Status code checking: `if (response.status >= 200 and response.status < 300)`
+- Error response parsing for 401: `if (response.status == 401)`
+- Structured error messages: `HTTP 401: Bad or expired token - {...}`
+
+### 4. Test Error Scenarios
+Review generated code to ensure:
+- 200 success responses parse normally
+- 401 responses parse error model and throw with details
+- 404 responses throw with message
+- Undefined status codes throw with fallback error
+
+### 5. Check Error Models
+Verify error models exist and are being used:
+- [ErrorObject.mo](samples/client/spotify/motoko/generated/Models/ErrorObject.mo)
+- [GetAnAlbum401Response.mo](samples/client/spotify/motoko/generated/Models/GetAnAlbum401Response.mo)
+
+### 6. Stage Files (Only After All Tests Pass)
+```bash
+git add modules/openapi-generator/src/main/resources/motoko/api.mustache
+git add modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/MotokoClientCodegen.java
+```
+**DO NOT COMMIT** - User will commit manually
+
+## Non-Breaking Changes
+
+**API Compatibility:**
+- Function signatures unchanged
+- Return types unchanged
+- No changes to function names or parameters
+
+**Behavioral Changes:**
+- Error messages become more informative (include status codes)
+- Errors thrown earlier (before attempting JSON parse)
+- New error types for HTTP error status codes
+
+**Impact:**
+- Existing try-catch blocks continue to work
+- Better debugging through informative error messages
+- Errors caught at correct HTTP layer instead of JSON parsing layer
+
+## Success Criteria
+
+✅ HTTP status code is checked after receiving response
+✅ 2xx responses parse as success (current behavior maintained)
+✅ 4xx/5xx responses parse error models when available
+✅ Error messages include status code and description
+✅ Structured error details included when parsing succeeds
+✅ Graceful fallback when error parsing fails
+✅ TODO comment removed from MotokoClientCodegen.java
+✅ Spotify samples regenerate successfully
+✅ Generated code compiles without errors
