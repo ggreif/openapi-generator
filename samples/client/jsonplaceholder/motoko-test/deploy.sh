@@ -62,6 +62,11 @@ echo ""
 echo "3. Testing GET /posts/1..."
 dfx canister call api_test testGetPostById '(1)'
 
+# Test nonexistent endpoint (expects 404 error)
+echo ""
+echo "4. Testing GET /nonexistent (expects 404 error)..."
+dfx canister call api_test testNonexistentEndpoint
+
 echo ""
 echo "=== Tests Complete ==="
 echo ""

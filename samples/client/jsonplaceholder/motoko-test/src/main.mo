@@ -6,6 +6,8 @@ import Debug "mo:core/Debug";
 import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Int "mo:core/Int";
+import Text "mo:core/Text";
+import Error "mo:core/Error";
 
 persistent actor {
   transient let baseUrl = "https://jsonplaceholder.typicode.com";
@@ -49,5 +51,22 @@ persistent actor {
     let firstN = Array.tabulate<Post>(count, func(i) = allPosts[i]);
     Debug.print("Returning " # Nat.toText(Array.size(firstN)) # " posts");
     firstN
+  };
+
+  // Test endpoint 3: Test nonexistent endpoint (expects 404 error)
+  public func testNonexistentEndpoint() : async Text {
+    Debug.print("Calling GET /nonexistent (expecting 404 error)...");
+    try {
+      let _ = await api.getNonexistent();
+      "ERROR: Expected 404 but request succeeded"
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("Caught expected error: " # errorMsg);
+      if (Text.contains(errorMsg, #text "404")) {
+        "SUCCESS: Caught expected 404 error - " # errorMsg
+      } else {
+        "WARNING: Caught error but not 404 - " # errorMsg
+      }
+    }
   };
 }

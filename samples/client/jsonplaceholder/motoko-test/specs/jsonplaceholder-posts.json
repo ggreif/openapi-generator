@@ -59,6 +59,27 @@
           }
         }
       }
+    },
+    "/nonexistent": {
+      "get": {
+        "operationId": "getNonexistent",
+        "summary": "Get nonexistent resource (for testing error handling)",
+        "responses": {
+          "200": {
+            "description": "Success (should never happen)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
     }
   },
   "components": {
