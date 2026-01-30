@@ -1,10 +1,10 @@
-TODO: Remove vendor/serde/ directory
+DONE: Remove vendor/serde/ directory
 
-Once the serde library is properly available via mops or another
-package manager, remove the typecheck-only stub at vendor/serde/.
+✅ Completed - vendor/serde/ removed
+✅ Updated /generate skill documentation
 
-The stub was a temporary solution for typechecking during development.
-Production code should use the real mo:serde implementation.
+The serde library is now available via mops, and all typechecking
+uses the real mo:serde implementation through mops dependency management.
 
 ---
 
