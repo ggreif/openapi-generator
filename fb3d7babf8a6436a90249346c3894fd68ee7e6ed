@@ -15,3 +15,26 @@ Files modified:
 - modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/MotokoClientCodegen.java
 
 This addresses the TODO that was at MotokoClientCodegen.java lines 321-324.
+
+---
+
+TODO: Enhanced Authentication Support
+
+Current state (MotokoClientCodegen.java lines 316-319):
+- Basic Bearer token authentication IS implemented in api.mustache
+- Config__ includes optional accessToken field
+- Authorization header added when token is provided
+
+Still TODO:
+- OAuth 2.0 flow integration (see notes on commit 3c1b286 for design)
+- API keys in query parameters
+- API keys in custom headers (beyond Authorization)
+- Multiple auth schemes per operation
+- Parse and implement OpenAPI security definitions
+- Support for security requirements at operation level
+
+Note: Bearer tokens work for APIs like Spotify that accept
+'Authorization: Bearer <token>' headers. More complex auth
+schemes need additional template and generator work.
+
+Related: OAuth 2.0 flow documentation on commit 3c1b286
