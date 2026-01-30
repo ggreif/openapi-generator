@@ -67,6 +67,16 @@ echo ""
 echo "4. Testing GET /nonexistent (expects 404 error)..."
 dfx canister call api_test testNonexistentEndpoint
 
+# Test high ID number
+echo ""
+echo "5. Testing GET /posts/999999 (high ID number)..."
+dfx canister call api_test testGetPostByHighId
+
+# Test negative ID number
+echo ""
+echo "6. Testing GET /posts/-1 (negative ID)..."
+dfx canister call api_test testGetPostByNegativeId
+
 echo ""
 echo "=== Tests Complete ==="
 echo ""

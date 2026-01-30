@@ -36,6 +36,10 @@ persistent actor {
   };
 
   // Test endpoint 2: Get single post by ID
+  // Note: The API parameter type is Int, providing compile-time type safety.
+  // Invalid inputs like "deadbeef" are rejected at compile time, not runtime.
+  // The underlying API returns 404 for text IDs, but we never reach that
+  // because the Motoko type system prevents passing non-integer values.
   public func testGetPostById(id: Int) : async Post {
     Debug.print("Calling GET /posts/" # Int.toText(id));
     let post = await api.getPostById(id);
@@ -66,6 +70,42 @@ persistent actor {
         "SUCCESS: Caught expected 404 error - " # errorMsg
       } else {
         "WARNING: Caught error but not 404 - " # errorMsg
+      }
+    }
+  };
+
+  // Test endpoint 4: Test getPostById with high number (expects 404)
+  public func testGetPostByHighId() : async Text {
+    Debug.print("Calling GET /posts/999999 (expecting 404 for non-existent post)...");
+    try {
+      let post = await api.getPostById(999999);
+      "UNEXPECTED: Got a post with id=" # Int.toText(post.id) # ", title=" # post.title
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("Caught error: " # errorMsg);
+      // JSONPlaceholder returns HTTP 404 for non-existent post IDs
+      if (Text.contains(errorMsg, #text "404")) {
+        "SUCCESS: Caught 404 error for non-existent post - " # errorMsg
+      } else {
+        "WARNING: Expected 404 but got different error - " # errorMsg
+      }
+    }
+  };
+
+  // Test endpoint 5: Test getPostById with negative number (expects 404)
+  public func testGetPostByNegativeId() : async Text {
+    Debug.print("Calling GET /posts/-1 (expecting 404 for invalid negative ID)...");
+    try {
+      let post = await api.getPostById(-1);
+      "UNEXPECTED: Got a post with id=" # Int.toText(post.id) # ", title=" # post.title
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("Caught error: " # errorMsg);
+      // JSONPlaceholder returns HTTP 404 for invalid post IDs (including negative)
+      if (Text.contains(errorMsg, #text "404")) {
+        "SUCCESS: Caught 404 error for negative ID - " # errorMsg
+      } else {
+        "WARNING: Expected 404 but got different error - " # errorMsg
       }
     }
   };
