@@ -56,14 +56,6 @@ This skill helps generate Motoko client code from OpenAPI specifications and ver
 
    Both approaches use the real `serde` library with all dependencies managed by mops.
 
-   **Alternative** - Quick typechecking with vendored stub (from repo root):
-   ```bash
-   moc --check \
-     --package core /Users/ggreif/motoko-core/src \
-     --package serde vendor/serde/src \
-     <file.mo>
-   ```
-
    **Note about warnings**: Generated API files will show warnings about unused identifiers (parameters like `response`, `status`, etc. in stub implementations). These warnings are expected and should be ignored - they're parameters in the generated API stubs that aren't used yet.
 
 ## Motoko Core Library Reference
@@ -94,12 +86,6 @@ This configuration uses:
 - All transitive dependencies explicitly listed to work around mops resolution
 
 **NOTE**: The `github.com/ggreif/*` references are temporary forks. When upstreamed, replace with official published versions (see comment in mops.toml.mustache template).
-
-**Vendored Serde Stub** (`vendor/serde/src/`):
-- Minimal typecheck-only stub for quick validation
-- Only provides type signatures, not functional
-- Useful for fast typechecking without dependency resolution
-- For full typechecking with real `serde`, use mops as described above
 
 ## Current Generator Features
 
