@@ -7,3 +7,13 @@ Once the mops-based typechecking approach has proven stable and reliable:
 4. Update all documentation to reference mops workflow only
 
 This consolidates on a single, proper dependency management approach instead of maintaining two parallel methods.
+
+---
+
+RESOLVED: Vendor directory removed and documentation updated
+
+✅ Removed vendor/serde/ directory
+✅ Updated /generate skill to remove manual moc typechecking instructions
+✅ Mops-based typechecking is now the only supported method
+
+All changes ready for commit.
