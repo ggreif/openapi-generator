@@ -2,6 +2,7 @@
 
 import Text "mo:core/Text";
 import Int "mo:core/Int";
+import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
 import { type ApiResponse } "../Models/ApiResponse";
@@ -19,6 +20,11 @@ module {
         #get;
         #head;
         #post;
+        // TODO: IC HTTP outcalls currently only support GET, HEAD, and POST.
+        //   PUT and DELETE methods are not yet supported by the management canister.
+        //   Once support is added, uncomment these:
+        // #put;
+        // #delete;
     };
 
     type CanisterHttpRequestArgument = {
@@ -42,26 +48,44 @@ module {
 
     let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
 
+    type Config__ = {
+        baseUrl : Text;
+        accessToken : ?Text;
+        max_response_bytes : ?Nat64;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+        is_replicated : ?Bool;
+        cycles : Nat;
+    };
     /// Add a new pet to the store
     /// 
-    public func addPet(baseUrl : Text, pet : Pet) : async Pet {
+    public func addPet(config : Config__, pet : Pet) : async* Pet {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/pet";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #post;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = do ? { let candidBlob = to_candid(pet); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -83,49 +107,63 @@ module {
 
     /// Deletes a pet
     /// 
-    public func deletePet(baseUrl : Text, petId : Int, apiKey : Text) : async () {
+    public func deletePet(config : Config__, petId : Int, apiKey : Text) : async* () {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/pet/{petId}"
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" },
+            { name = "api_key"; value = apiKey }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #delete;
-            headers = [
-                { name = "Content-Type"; value = "application/json" },
-                { name = "api_key"; value = apiKey }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        ignore await (with cycles = 30_000_000_000) http_request(request);
+        ignore await (with cycles) http_request(request);
 
     };
 
     /// Finds Pets by status
     /// Multiple status values can be provided with comma separated strings
-    public func findPetsByStatus(baseUrl : Text, status : [Text]) : async [Pet] {
+    public func findPetsByStatus(config : Config__, status : [Text]) : async* [Pet] {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/pet/findByStatus";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #get;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -147,24 +185,31 @@ module {
 
     /// Finds Pets by tags
     /// Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
-    public func findPetsByTags(baseUrl : Text, tags : [Text]) : async [Pet] {
+    public func findPetsByTags(config : Config__, tags : [Text]) : async* [Pet] {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/pet/findByTags";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #get;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -186,25 +231,32 @@ module {
 
     /// Find pet by ID
     /// Returns a single pet
-    public func getPetById(baseUrl : Text, petId : Int) : async Pet {
+    public func getPetById(config : Config__, petId : Int) : async* Pet {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/pet/{petId}"
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #get;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -226,24 +278,31 @@ module {
 
     /// Update an existing pet
     /// 
-    public func updatePet(baseUrl : Text, pet : Pet) : async Pet {
+    public func updatePet(config : Config__, pet : Pet) : async* Pet {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/pet";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #put;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = do ? { let candidBlob = to_candid(pet); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -265,49 +324,63 @@ module {
 
     /// Updates a pet in the store with form data
     /// 
-    public func updatePetWithForm(baseUrl : Text, petId : Int, name : Text, status : Text) : async () {
+    public func updatePetWithForm(config : Config__, petId : Int, name : Text, status : Text) : async* () {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/pet/{petId}"
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #post;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        ignore await (with cycles = 30_000_000_000) http_request(request);
+        ignore await (with cycles) http_request(request);
 
     };
 
     /// uploads an image
     /// 
-    public func uploadFile(baseUrl : Text, petId : Int, additionalMetadata : Text, file : Blob) : async ApiResponse {
+    public func uploadFile(config : Config__, petId : Int, additionalMetadata : Text, file : Blob) : async* ApiResponse {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/pet/{petId}/uploadImage"
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #post;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -327,4 +400,66 @@ module {
         }
     };
 
+
+    let operations__ = {
+        addPet;
+        deletePet;
+        findPetsByStatus;
+        findPetsByTags;
+        getPetById;
+        updatePet;
+        updatePetWithForm;
+        uploadFile;
+    };
+
+    public module class PetApi(config : Config__) {
+        /// Add a new pet to the store
+        /// 
+        public func addPet(pet : Pet) : async Pet {
+            await* operations__.addPet(config, pet)
+        };
+
+        /// Deletes a pet
+        /// 
+        public func deletePet(petId : Int, apiKey : Text) : async () {
+            await* operations__.deletePet(config, petId, apiKey)
+        };
+
+        /// Finds Pets by status
+        /// Multiple status values can be provided with comma separated strings
+        public func findPetsByStatus(status : [Text]) : async [Pet] {
+            await* operations__.findPetsByStatus(config, status)
+        };
+
+        /// Finds Pets by tags
+        /// Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
+        public func findPetsByTags(tags : [Text]) : async [Pet] {
+            await* operations__.findPetsByTags(config, tags)
+        };
+
+        /// Find pet by ID
+        /// Returns a single pet
+        public func getPetById(petId : Int) : async Pet {
+            await* operations__.getPetById(config, petId)
+        };
+
+        /// Update an existing pet
+        /// 
+        public func updatePet(pet : Pet) : async Pet {
+            await* operations__.updatePet(config, pet)
+        };
+
+        /// Updates a pet in the store with form data
+        /// 
+        public func updatePetWithForm(petId : Int, name : Text, status : Text) : async () {
+            await* operations__.updatePetWithForm(config, petId, name, status)
+        };
+
+        /// uploads an image
+        /// 
+        public func uploadFile(petId : Int, additionalMetadata : Text, file : Blob) : async ApiResponse {
+            await* operations__.uploadFile(config, petId, additionalMetadata, file)
+        };
+
+    }
 }

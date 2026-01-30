@@ -2,6 +2,7 @@
 
 import Text "mo:core/Text";
 import Int "mo:core/Int";
+import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
 import { type Order } "../Models/Order";
@@ -19,6 +20,11 @@ module {
         #get;
         #head;
         #post;
+        // TODO: IC HTTP outcalls currently only support GET, HEAD, and POST.
+        //   PUT and DELETE methods are not yet supported by the management canister.
+        //   Once support is added, uncomment these:
+        // #put;
+        // #delete;
     };
 
     type CanisterHttpRequestArgument = {
@@ -42,50 +48,75 @@ module {
 
     let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
 
+    type Config__ = {
+        baseUrl : Text;
+        accessToken : ?Text;
+        max_response_bytes : ?Nat64;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+        is_replicated : ?Bool;
+        cycles : Nat;
+    };
     /// Delete purchase order by ID
     /// For valid response try integer IDs with value < 1000. Anything above 1000 or nonintegers will generate API errors
-    public func deleteOrder(baseUrl : Text, orderId : Text) : async () {
+    public func deleteOrder(config : Config__, orderId : Text) : async* () {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/store/order/{orderId}"
             |> Text.replace(_, #text "{orderId}", orderId);
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #delete;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        ignore await (with cycles = 30_000_000_000) http_request(request);
+        ignore await (with cycles) http_request(request);
 
     };
 
     /// Returns pet inventories by status
     /// Returns a map of status codes to quantities
-    public func getInventory(baseUrl : Text) : async Map<Text, Int> {
+    public func getInventory(config : Config__) : async* Map<Text, Int> {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/store/inventory";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #get;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -107,25 +138,32 @@ module {
 
     /// Find purchase order by ID
     /// For valid response try integer IDs with value <= 5 or > 10. Other values will generate exceptions
-    public func getOrderById(baseUrl : Text, orderId : Int) : async Order {
+    public func getOrderById(config : Config__, orderId : Int) : async* Order {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/store/order/{orderId}"
             |> Text.replace(_, #text "{orderId}", debug_show(orderId));
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #get;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -147,24 +185,31 @@ module {
 
     /// Place an order for a pet
     /// 
-    public func placeOrder(baseUrl : Text, order : Order) : async Order {
+    public func placeOrder(config : Config__, order : Order) : async* Order {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/store/order";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #post;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = do ? { let candidBlob = to_candid(order); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -184,4 +229,38 @@ module {
         }
     };
 
+
+    let operations__ = {
+        deleteOrder;
+        getInventory;
+        getOrderById;
+        placeOrder;
+    };
+
+    public module class StoreApi(config : Config__) {
+        /// Delete purchase order by ID
+        /// For valid response try integer IDs with value < 1000. Anything above 1000 or nonintegers will generate API errors
+        public func deleteOrder(orderId : Text) : async () {
+            await* operations__.deleteOrder(config, orderId)
+        };
+
+        /// Returns pet inventories by status
+        /// Returns a map of status codes to quantities
+        public func getInventory() : async Map<Text, Int> {
+            await* operations__.getInventory(config)
+        };
+
+        /// Find purchase order by ID
+        /// For valid response try integer IDs with value <= 5 or > 10. Other values will generate exceptions
+        public func getOrderById(orderId : Int) : async Order {
+            await* operations__.getOrderById(config, orderId)
+        };
+
+        /// Place an order for a pet
+        /// 
+        public func placeOrder(order : Order) : async Order {
+            await* operations__.placeOrder(config, order)
+        };
+
+    }
 }

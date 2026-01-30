@@ -2,126 +2,211 @@
 
 import Text "mo:core/Text";
 import Int "mo:core/Int";
+import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
-import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 import { type User } "../Models/User";
 
 module {
+    // Management Canister interface for HTTP outcalls
+    // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
+    type HttpHeader = {
+        name : Text;
+        value : Text;
+    };
+
+    type HttpMethod = {
+        #get;
+        #head;
+        #post;
+        // TODO: IC HTTP outcalls currently only support GET, HEAD, and POST.
+        //   PUT and DELETE methods are not yet supported by the management canister.
+        //   Once support is added, uncomment these:
+        // #put;
+        // #delete;
+    };
+
+    type CanisterHttpRequestArgument = {
+        url : Text;
+        max_response_bytes : ?Nat64;
+        method : HttpMethod;
+        headers : [HttpHeader];
+        body : ?Blob;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+        is_replicated : ?Bool;
+    };
+
+    type CanisterHttpResponsePayload = {
+        status : Nat;
+        headers : [HttpHeader];
+        body : Blob;
+    };
+
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
+
+    type Config__ = {
+        baseUrl : Text;
+        accessToken : ?Text;
+        max_response_bytes : ?Nat64;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+        is_replicated : ?Bool;
+        cycles : Nat;
+    };
     /// Create user
     /// This can only be done by the logged in user.
-    public func createUser(baseUrl : Text, user : User) : async () {
+    public func createUser(config : Config__, user : User) : async* () {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/user";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #post;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = do ? { let candidBlob = to_candid(user); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        ignore await (with cycles = 30_000_000_000) http_request(request);
+        ignore await (with cycles) http_request(request);
 
     };
 
     /// Creates list of users with given input array
     /// 
-    public func createUsersWithArrayInput(baseUrl : Text, user : [User]) : async () {
+    public func createUsersWithArrayInput(config : Config__, user : [User]) : async* () {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/user/createWithArray";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #post;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = do ? { let candidBlob = to_candid(user); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        ignore await (with cycles = 30_000_000_000) http_request(request);
+        ignore await (with cycles) http_request(request);
 
     };
 
     /// Creates list of users with given input array
     /// 
-    public func createUsersWithListInput(baseUrl : Text, user : [User]) : async () {
+    public func createUsersWithListInput(config : Config__, user : [User]) : async* () {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/user/createWithList";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #post;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = do ? { let candidBlob = to_candid(user); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        ignore await (with cycles = 30_000_000_000) http_request(request);
+        ignore await (with cycles) http_request(request);
 
     };
 
     /// Delete user
     /// This can only be done by the logged in user.
-    public func deleteUser(baseUrl : Text, username : Text) : async () {
+    public func deleteUser(config : Config__, username : Text) : async* () {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/user/{username}"
             |> Text.replace(_, #text "{username}", username);
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #delete;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        ignore await (with cycles = 30_000_000_000) http_request(request);
+        ignore await (with cycles) http_request(request);
 
     };
 
     /// Get user by user name
     /// 
-    public func getUserByName(baseUrl : Text, username : Text) : async User {
+    public func getUserByName(config : Config__, username : Text) : async* User {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/user/{username}"
             |> Text.replace(_, #text "{username}", username);
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #get;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -143,24 +228,31 @@ module {
 
     /// Logs user into the system
     /// 
-    public func loginUser(baseUrl : Text, username : Text, password : Text) : async Text {
+    public func loginUser(config : Config__, username : Text, password : Text) : async* Text {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/user/login";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #get;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        let response : CanisterHttpResponsePayload = await (with cycles = 30_000_000_000) http_request(request);
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
         // Parse JSON response
         let responseText = switch (Text.decodeUtf8(response.body)) {
@@ -182,49 +274,125 @@ module {
 
     /// Logs out current logged in user session
     /// 
-    public func logoutUser(baseUrl : Text) : async () {
+    public func logoutUser(config : Config__) : async* () {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/user/logout";
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #get;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = null;
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        ignore await (with cycles = 30_000_000_000) http_request(request);
+        ignore await (with cycles) http_request(request);
 
     };
 
     /// Updated user
     /// This can only be done by the logged in user.
-    public func updateUser(baseUrl : Text, username : Text, user : User) : async () {
+    public func updateUser(config : Config__, username : Text, user : User) : async* () {
+        let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/user/{username}"
             |> Text.replace(_, #text "{username}", username);
 
-        let request : CanisterHttpRequestArgument = {
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
             url;
-            max_response_bytes = null;
             method = #put;
-            headers = [
-                { name = "Content-Type"; value = "application/json" }
-            ];
+            headers;
             body = do ? { let candidBlob = to_candid(user); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
-            transform = null;
-            is_replicated = null;
         };
 
         // Call the management canister's http_request method with cycles
-        // 30M cycles should be sufficient for most requests
-        ignore await (with cycles = 30_000_000_000) http_request(request);
+        ignore await (with cycles) http_request(request);
 
     };
 
+
+    let operations__ = {
+        createUser;
+        createUsersWithArrayInput;
+        createUsersWithListInput;
+        deleteUser;
+        getUserByName;
+        loginUser;
+        logoutUser;
+        updateUser;
+    };
+
+    public module class UserApi(config : Config__) {
+        /// Create user
+        /// This can only be done by the logged in user.
+        public func createUser(user : User) : async () {
+            await* operations__.createUser(config, user)
+        };
+
+        /// Creates list of users with given input array
+        /// 
+        public func createUsersWithArrayInput(user : [User]) : async () {
+            await* operations__.createUsersWithArrayInput(config, user)
+        };
+
+        /// Creates list of users with given input array
+        /// 
+        public func createUsersWithListInput(user : [User]) : async () {
+            await* operations__.createUsersWithListInput(config, user)
+        };
+
+        /// Delete user
+        /// This can only be done by the logged in user.
+        public func deleteUser(username : Text) : async () {
+            await* operations__.deleteUser(config, username)
+        };
+
+        /// Get user by user name
+        /// 
+        public func getUserByName(username : Text) : async User {
+            await* operations__.getUserByName(config, username)
+        };
+
+        /// Logs user into the system
+        /// 
+        public func loginUser(username : Text, password : Text) : async Text {
+            await* operations__.loginUser(config, username, password)
+        };
+
+        /// Logs out current logged in user session
+        /// 
+        public func logoutUser() : async () {
+            await* operations__.logoutUser(config)
+        };
+
+        /// Updated user
+        /// This can only be done by the logged in user.
+        public func updateUser(username : Text, user : User) : async () {
+            await* operations__.updateUser(config, username, user)
+        };
+
+    }
 }
