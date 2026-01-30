@@ -17,6 +17,7 @@ persistent actor {
     max_response_bytes = null;
     transform = null;
     is_replicated = null;
+    cycles = 30_000_000_000; // 30B cycles - sufficient for most requests
   });
 
   // Health check endpoint
