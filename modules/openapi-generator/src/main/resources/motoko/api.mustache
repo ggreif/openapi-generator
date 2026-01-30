@@ -60,6 +60,7 @@ module {
 
 {{/useDfx}}
 {{#operations}}
+    type Config__ = {baseUrl : Text; accessToken : ?Text};
 {{#operation}}
     {{#summary}}
     /// {{{summary}}}
@@ -67,7 +68,7 @@ module {
     {{#notes}}
     /// {{{notes}}}
     {{/notes}}
-    public func {{operationId}}(config : {baseUrl : Text; accessToken : ?Text}{{#allParams}}, {{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async* {{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}(){{/returnType}} {
+    public func {{operationId}}(config : Config__{{#allParams}}, {{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async* {{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}(){{/returnType}} {
         let {baseUrl; accessToken} = config;
         let url = baseUrl # "{{path}}"{{#pathParams}}
             |> Text.replace(_, #text "{{=<% %>=}}{<%baseName%>}<%={{ }}=%>", {{#isString}}{{paramName}}{{/isString}}{{^isString}}{{#isInteger}}Int.toText({{paramName}}){{/isInteger}}{{^isInteger}}debug_show({{paramName}}){{/isInteger}}{{/isString}}){{/pathParams}};
@@ -122,7 +123,7 @@ module {
 {{/operation}}
 {{/operations}}
 
-    let operations = {
+    let operations__ = {
 {{#operations}}
 {{#operation}}
         {{operationId}};
@@ -130,7 +131,7 @@ module {
 {{/operations}}
     };
 
-    public module class {{classname}}(config : {baseUrl : Text; accessToken : ?Text}) {
+    public module class {{classname}}(config : Config__) {
 {{#operations}}
 {{#operation}}
         {{#summary}}
@@ -140,7 +141,7 @@ module {
         /// {{{notes}}}
         {{/notes}}
         public func {{operationId}}({{#allParams}}{{^-first}}, {{/-first}}{{paramName}} : {{#isNullable}}?{{/isNullable}}{{dataType}}{{/allParams}}) : async {{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}(){{/returnType}} {
-            await* operations.{{operationId}}(config{{#allParams}}, {{paramName}}{{/allParams}})
+            await* operations__.{{operationId}}(config{{#allParams}}, {{paramName}}{{/allParams}})
         };
 
 {{/operation}}
