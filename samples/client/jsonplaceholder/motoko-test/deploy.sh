@@ -60,7 +60,7 @@ dfx canister call api_test testGetFirstPosts '(5)'
 # Test GET single post
 echo ""
 echo "3. Testing GET /posts/1..."
-dfx canister call api_test testGetPostById '(1)'
+dfx canister call api_test testGetPostById '("1")'
 
 # Test nonexistent endpoint (expects 404 error)
 echo ""
@@ -76,6 +76,11 @@ dfx canister call api_test testGetPostByHighId
 echo ""
 echo "6. Testing GET /posts/-1 (negative ID)..."
 dfx canister call api_test testGetPostByNegativeId
+
+# Test string ID
+echo ""
+echo "7. Testing GET /posts/deadbeef (string ID)..."
+dfx canister call api_test testGetPostByStringId
 
 echo ""
 echo "=== Tests Complete ==="

@@ -36,12 +36,9 @@ persistent actor {
   };
 
   // Test endpoint 2: Get single post by ID
-  // Note: The API parameter type is Int, providing compile-time type safety.
-  // Invalid inputs like "deadbeef" are rejected at compile time, not runtime.
-  // The underlying API returns 404 for text IDs, but we never reach that
-  // because the Motoko type system prevents passing non-integer values.
-  public func testGetPostById(id: Int) : async Post {
-    Debug.print("Calling GET /posts/" # Int.toText(id));
+  // Note: Changed to Text parameter to allow testing type-unsafe inputs
+  public func testGetPostById(id: Text) : async Post {
+    Debug.print("Calling GET /posts/" # id);
     let post = await api.getPostById(id);
     Debug.print("Retrieved post: " # post.title);
     post
@@ -78,7 +75,7 @@ persistent actor {
   public func testGetPostByHighId() : async Text {
     Debug.print("Calling GET /posts/999999 (expecting 404 for non-existent post)...");
     try {
-      let post = await api.getPostById(999999);
+      let post = await api.getPostById("999999");
       "UNEXPECTED: Got a post with id=" # Int.toText(post.id) # ", title=" # post.title
     } catch (err) {
       let errorMsg = Error.message(err);
@@ -96,7 +93,7 @@ persistent actor {
   public func testGetPostByNegativeId() : async Text {
     Debug.print("Calling GET /posts/-1 (expecting 404 for invalid negative ID)...");
     try {
-      let post = await api.getPostById(-1);
+      let post = await api.getPostById("-1");
       "UNEXPECTED: Got a post with id=" # Int.toText(post.id) # ", title=" # post.title
     } catch (err) {
       let errorMsg = Error.message(err);
@@ -104,6 +101,26 @@ persistent actor {
       // JSONPlaceholder returns HTTP 404 for invalid post IDs (including negative)
       if (Text.contains(errorMsg, #text "404")) {
         "SUCCESS: Caught 404 error for negative ID - " # errorMsg
+      } else {
+        "WARNING: Expected 404 but got different error - " # errorMsg
+      }
+    }
+  };
+
+  // Test endpoint 6: Test getPostById with "deadbeef" string (expects 404)
+  // This demonstrates type-unsafe input that was only possible after changing
+  // the parameter type from integer to string in the OpenAPI spec.
+  public func testGetPostByStringId() : async Text {
+    Debug.print("Calling GET /posts/deadbeef (expecting 404 for invalid string)...");
+    try {
+      let post = await api.getPostById("deadbeef");
+      "UNEXPECTED: Got a post with id=" # Int.toText(post.id) # ", title=" # post.title
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("Caught error: " # errorMsg);
+      // JSONPlaceholder returns HTTP 404 for non-integer IDs
+      if (Text.contains(errorMsg, #text "404")) {
+        "SUCCESS: Caught 404 error for string 'deadbeef' - " # errorMsg
       } else {
         "WARNING: Expected 404 but got different error - " # errorMsg
       }
