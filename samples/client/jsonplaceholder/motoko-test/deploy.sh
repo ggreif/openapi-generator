@@ -83,17 +83,17 @@ echo "7. Testing GET /posts/deadbeef (string ID)..."
 dfx canister call api_test testGetPostByStringId
 
 # Test HTTP 500 error from httpbin.org
-echo ""
+echo
 echo "8. Testing GET https://httpbin.org/status/500 (expects 500 error)..."
 dfx canister call api_test testGetStatus500
 
 # Test HTTP 503 error from httpbin.org
-echo ""
+echo
 echo "9. Testing GET https://httpbin.org/status/503 (expects 503 error)..."
 dfx canister call api_test testGetStatus503
 
 # Test HTTP 200 from httpbin.org (control test)
-echo ""
+echo
 echo "10. Testing GET https://httpbin.org/status/200 (expects success)..."
 dfx canister call api_test testGetStatus200
 
