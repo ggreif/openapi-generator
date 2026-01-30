@@ -89,6 +89,66 @@
           }
         }
       }
+    },
+    "/status/500": {
+      "get": {
+        "operationId": "getStatus500",
+        "summary": "Get HTTP 500 error from httpbin.org (for testing error handling)",
+        "responses": {
+          "200": {
+            "description": "Success (should never happen)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/status/503": {
+      "get": {
+        "operationId": "getStatus503",
+        "summary": "Get HTTP 503 error from httpbin.org (for testing error handling)",
+        "responses": {
+          "200": {
+            "description": "Success (should never happen)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/status/200": {
+      "get": {
+        "operationId": "getStatus200",
+        "summary": "Get HTTP 200 success from httpbin.org (control test)",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

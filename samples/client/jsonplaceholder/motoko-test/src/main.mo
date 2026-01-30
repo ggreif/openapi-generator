@@ -11,10 +11,21 @@ import Error "mo:core/Error";
 
 persistent actor {
   transient let baseUrl = "https://jsonplaceholder.typicode.com";
+  transient let httpbinUrl = "https://httpbin.org";
 
   // Instantiate the API client with base URL and no access token
   transient let api = DefaultApi({
     baseUrl;
+    accessToken = null;
+    max_response_bytes = null;
+    transform = null;
+    is_replicated = null;
+    cycles = 30_000_000_000; // 30B cycles - sufficient for most requests
+  });
+
+  // Instantiate a separate API client for httpbin.org endpoints
+  transient let httpbinApi = DefaultApi({
+    baseUrl = httpbinUrl;
     accessToken = null;
     max_response_bytes = null;
     transform = null;
@@ -124,6 +135,54 @@ persistent actor {
       } else {
         "WARNING: Expected 404 but got different error - " # errorMsg
       }
+    }
+  };
+
+  // Test endpoint 8: Test HTTP 500 error from httpbin.org
+  public func testGetStatus500() : async Text {
+    Debug.print("Calling GET https://httpbin.org/status/500 (expecting 500 error)...");
+    try {
+      let _ = await httpbinApi.getStatus500();
+      "ERROR: Expected 500 but request succeeded"
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("Caught expected error: " # errorMsg);
+      if (Text.contains(errorMsg, #text "500")) {
+        "SUCCESS: Caught expected 500 error - " # errorMsg
+      } else {
+        "WARNING: Caught error but not 500 - " # errorMsg
+      }
+    }
+  };
+
+  // Test endpoint 9: Test HTTP 503 error from httpbin.org
+  public func testGetStatus503() : async Text {
+    Debug.print("Calling GET https://httpbin.org/status/503 (expecting 503 error)...");
+    try {
+      let _ = await httpbinApi.getStatus503();
+      "ERROR: Expected 503 but request succeeded"
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("Caught expected error: " # errorMsg);
+      if (Text.contains(errorMsg, #text "503")) {
+        "SUCCESS: Caught expected 503 error - " # errorMsg
+      } else {
+        "WARNING: Caught error but not 503 - " # errorMsg
+      }
+    }
+  };
+
+  // Test endpoint 10: Test HTTP 200 from httpbin.org (control test)
+  public func testGetStatus200() : async Text {
+    Debug.print("Calling GET https://httpbin.org/status/200 (expecting success)...");
+    try {
+      let _ = await httpbinApi.getStatus200();
+      Debug.print("Success: Received 200 response from httpbin.org");
+      "SUCCESS: Received 200 response from httpbin.org"
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("Unexpected error: " # errorMsg);
+      "ERROR: Expected 200 but got error - " # errorMsg
     }
   };
 }
