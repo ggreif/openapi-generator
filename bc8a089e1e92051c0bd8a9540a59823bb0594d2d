@@ -1,0 +1,24 @@
+TODO: Improve handling of empty HTTP 200 responses
+
+Test 10 (testGetStatus200) currently returns:
+"ERROR: Expected 200 but got error - HTTP 200: Failed to parse JSON"
+
+This happens because httpbin.org's /status/200 endpoint returns an empty
+body (content-length: 0), which cannot be parsed as JSON.
+
+Current behavior:
+- Generator expects all 200 responses to have JSON body (based on OpenAPI spec)
+- Empty body causes "Failed to parse JSON: Failed to parse JSON text" error
+- Error handling correctly identifies it as HTTP 200 with unparseable content
+
+Possible improvements:
+1. Handle empty response bodies gracefully (return empty object or null)
+2. Check Content-Length header before attempting JSON parse
+3. Make JSON parsing optional based on Content-Type header
+4. Update OpenAPI spec to indicate no response body for /status/200
+
+Current workaround:
+- Use endpoints that return actual JSON bodies for 200 tests
+- Or accept that the test shows correct error handling for malformed 200 responses
+
+Priority: Low (test still validates error messages include correct status codes)
