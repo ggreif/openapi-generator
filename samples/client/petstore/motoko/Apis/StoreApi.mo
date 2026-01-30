@@ -59,6 +59,7 @@ module {
         is_replicated : ?Bool;
         cycles : Nat;
     };
+
     /// Delete purchase order by ID
     /// For valid response try integer IDs with value < 1000. Anything above 1000 or nonintegers will generate API errors
     public func deleteOrder(config : Config__, orderId : Text) : async* () {
@@ -118,21 +119,33 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Map<Text, Int> |>
+            (switch (_) {
+                case (?value) value;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to Map<Text, Int>");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
 
-        let result : ?Map<Text, Int> = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to Map<Text, Int>");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -165,21 +178,41 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Order |>
+            (switch (_) {
+                case (?value) value;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to Order");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid ID supplied (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid ID supplied");
+            };
+            // 404: Order not found (no response body model defined)
+            if (response.status == 404) {
+                throw Error.reject("HTTP 404: Order not found");
+            };
 
-        let result : ?Order = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to Order");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -211,21 +244,37 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Order |>
+            (switch (_) {
+                case (?value) value;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to Order");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid Order (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid Order");
+            };
 
-        let result : ?Order = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to Order");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 

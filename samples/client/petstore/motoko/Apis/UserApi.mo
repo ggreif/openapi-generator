@@ -58,6 +58,7 @@ module {
         is_replicated : ?Bool;
         cycles : Nat;
     };
+
     /// Create user
     /// This can only be done by the logged in user.
     public func createUser(config : Config__, user : User) : async* () {
@@ -208,21 +209,41 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?User |>
+            (switch (_) {
+                case (?value) value;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to User");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid username supplied (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid username supplied");
+            };
+            // 404: User not found (no response body model defined)
+            if (response.status == 404) {
+                throw Error.reject("HTTP 404: User not found");
+            };
 
-        let result : ?User = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to User");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -254,21 +275,37 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Text |>
+            (switch (_) {
+                case (?value) value;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to Text");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid username/password supplied (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid username/password supplied");
+            };
 
-        let result : ?Text = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to Text");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
