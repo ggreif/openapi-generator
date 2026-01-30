@@ -1,0 +1,826 @@
+openapi: 3.0.0
+info:
+  title: Yamaha MusicCast HTTP API
+  description: |
+    Yamaha MusicCast HTTP simplified API for Control Systems.
+    This API provides comprehensive control and interrogation of MusicCast devices.
+
+    Prerequisites:
+    - MusicCast devices must be on a fixed or bound IP Address
+    - Device should be set to wired or wireless only (not both) to avoid network loops
+
+    Note: This specification covers the v1 simplified API. For more advanced functionality,
+    see the v2 and extended APIs documented at:
+    https://github.com/rsc-dev/pyamaha/tree/master/doc
+  version: 1.1.0
+  contact:
+    name: Habitech Workshop
+    email: workshop@habitech.co.uk
+
+servers:
+  - url: http://{ipaddress}/YamahaExtendedControl/v1
+    description: MusicCast device endpoint
+    variables:
+      ipaddress:
+        default: 192.168.1.1
+        description: IP address of the MusicCast device
+
+tags:
+  - name: system
+    description: Device information and system functions
+  - name: power
+    description: Power control functions
+  - name: zone
+    description: Zone control (audio input, volume, sound program)
+  - name: tuner
+    description: AM/FM/DAB tuner control
+  - name: netusb
+    description: Network/USB streaming and presets
+  - name: transport
+    description: Media transport control (play, pause, skip, etc.)
+
+paths:
+  /system/getDeviceInfo:
+    get:
+      tags:
+        - system
+      summary: Get device information
+      description: Returns basic device information including model, version, etc.
+      operationId: getDeviceInfo
+      responses:
+        '200':
+          description: Device information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /system/getFeatures:
+    get:
+      tags:
+        - system
+      summary: Get available device features
+      description: Returns the available features and capabilities of the MusicCast device
+      operationId: getFeatures
+      responses:
+        '200':
+          description: Device features retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /system/getNetworkStatus:
+    get:
+      tags:
+        - system
+      summary: Get network status
+      description: Returns the current network status of the device
+      operationId: getNetworkStatus
+      responses:
+        '200':
+          description: Network status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /system/getFuncStatus:
+    get:
+      tags:
+        - system
+      summary: Get function status
+      description: Returns function status (e.g., Auto Power Standby)
+      operationId: getFuncStatus
+      responses:
+        '200':
+          description: Function status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /system/getLocationInfo:
+    get:
+      tags:
+        - system
+      summary: Get location info and zone list
+      description: Returns location information and available zones on the device
+      operationId: getLocationInfo
+      responses:
+        '200':
+          description: Location info retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /system/setAutoPowerStandby:
+    get:
+      tags:
+        - power
+      summary: Enable or disable auto power standby
+      description: Sets the auto power standby feature on or off
+      operationId: setAutoPowerStandby
+      parameters:
+        - name: enable
+          in: query
+          required: true
+          description: Enable (true) or disable (false) auto power standby
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Auto power standby setting updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /{zone}/getStatus:
+    get:
+      tags:
+        - zone
+      summary: Get zone status
+      description: Returns the current status of the specified zone
+      operationId: getZoneStatus
+      parameters:
+        - name: zone
+          in: path
+          required: true
+          description: Zone identifier (e.g., main, zone2, zone3)
+          schema:
+            type: string
+            default: main
+      responses:
+        '200':
+          description: Zone status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /{zone}/getSoundProgramList:
+    get:
+      tags:
+        - zone
+      summary: Get sound program list
+      description: Returns the list of available sound programs for the zone
+      operationId: getSoundProgramList
+      parameters:
+        - name: zone
+          in: path
+          required: true
+          description: Zone identifier (e.g., main, zone2, zone3)
+          schema:
+            type: string
+            default: main
+      responses:
+        '200':
+          description: Sound program list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /{zone}/setPower:
+    get:
+      tags:
+        - power
+      summary: Set power status
+      description: Turn the zone on, put it in standby, or toggle power
+      operationId: setPower
+      parameters:
+        - name: zone
+          in: path
+          required: true
+          description: Zone identifier (e.g., main, zone2, zone3)
+          schema:
+            type: string
+            default: main
+        - name: power
+          in: query
+          required: true
+          description: Power command
+          schema:
+            type: string
+            enum:
+              - on
+              - standby
+              - toggle
+      responses:
+        '200':
+          description: Power status changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /{zone}/setSleep:
+    get:
+      tags:
+        - zone
+      summary: Set sleep timer
+      description: Sets the sleep timer in minutes (0 to cancel)
+      operationId: setSleep
+      parameters:
+        - name: zone
+          in: path
+          required: true
+          description: Zone identifier (e.g., main, zone2, zone3)
+          schema:
+            type: string
+            default: main
+        - name: sleep
+          in: query
+          required: true
+          description: Sleep timer duration in minutes (0 to cancel)
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Sleep timer set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /{zone}/setInput:
+    get:
+      tags:
+        - zone
+      summary: Set input source
+      description: Sets the input source for the zone
+      operationId: setInput
+      parameters:
+        - name: zone
+          in: path
+          required: true
+          description: Zone identifier (e.g., main, zone2, zone3)
+          schema:
+            type: string
+            default: main
+        - name: input
+          in: query
+          required: true
+          description: Input source identifier
+          schema:
+            type: string
+            enum:
+              - net_radio
+              - napster
+              - spotify
+              - juke
+              - qobuz
+              - tidal
+              - deezer
+              - server
+              - bluetooth
+              - airplay
+              - mc_link
+              - usb
+        - name: mode
+          in: query
+          required: false
+          description: Input mode (optional)
+          schema:
+            type: string
+            enum:
+              - autoplay
+              - autoplay_disabled
+      responses:
+        '200':
+          description: Input source changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /{zone}/prepareInputChange:
+    get:
+      tags:
+        - zone
+      summary: Prepare input change
+      description: Let a device do necessary process before changing input in a specific zone
+      operationId: prepareInputChange
+      parameters:
+        - name: zone
+          in: path
+          required: true
+          description: Zone identifier (e.g., main, zone2, zone3)
+          schema:
+            type: string
+            default: main
+        - name: input
+          in: query
+          required: true
+          description: Input source identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Input change prepared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /{zone}/setSoundProgram:
+    get:
+      tags:
+        - zone
+      summary: Set sound program
+      description: Sets the sound program (DSP mode) for the zone
+      operationId: setSoundProgram
+      parameters:
+        - name: zone
+          in: path
+          required: true
+          description: Zone identifier (e.g., main, zone2, zone3)
+          schema:
+            type: string
+            default: main
+        - name: program
+          in: query
+          required: true
+          description: Sound program identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sound program changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /{zone}/setVolume:
+    get:
+      tags:
+        - zone
+      summary: Set volume
+      description: Sets the volume level directly or incrementally
+      operationId: setVolume
+      parameters:
+        - name: zone
+          in: path
+          required: true
+          description: Zone identifier (e.g., main, zone2, zone3)
+          schema:
+            type: string
+            default: main
+        - name: volume
+          in: query
+          required: true
+          description: Volume level (direct value, 'up', or 'down')
+          schema:
+            oneOf:
+              - type: integer
+                minimum: 0
+              - type: string
+                enum:
+                  - up
+                  - down
+        - name: step
+          in: query
+          required: false
+          description: Step size for incremental volume changes
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Volume changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /{zone}/setMute:
+    get:
+      tags:
+        - zone
+      summary: Set mute
+      description: Enables or disables mute for the zone
+      operationId: setMute
+      parameters:
+        - name: zone
+          in: path
+          required: true
+          description: Zone identifier (e.g., main, zone2, zone3)
+          schema:
+            type: string
+            default: main
+        - name: enable
+          in: query
+          required: true
+          description: Enable (true) or disable (false) mute
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Mute setting changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tuner/recallPreset:
+    get:
+      tags:
+        - tuner
+      summary: Recall tuner preset
+      description: Recalls a saved tuner preset
+      operationId: recallTunerPreset
+      parameters:
+        - name: zone
+          in: query
+          required: true
+          description: Zone identifier
+          schema:
+            type: string
+            default: main
+        - name: band
+          in: query
+          required: true
+          description: Tuner band
+          schema:
+            type: string
+            enum:
+              - am
+              - fm
+              - dab
+        - name: num
+          in: query
+          required: true
+          description: Preset number
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Tuner preset recalled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tuner/switchPreset:
+    get:
+      tags:
+        - tuner
+      summary: Switch tuner preset
+      description: Switches to the next or previous tuner preset
+      operationId: switchTunerPreset
+      parameters:
+        - name: dir
+          in: query
+          required: true
+          description: Direction to switch preset
+          schema:
+            type: string
+            enum:
+              - next
+              - previous
+      responses:
+        '200':
+          description: Tuner preset switched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tuner/storePreset:
+    get:
+      tags:
+        - tuner
+      summary: Store tuner preset
+      description: Stores the current tuner station as a preset
+      operationId: storeTunerPreset
+      parameters:
+        - name: num
+          in: query
+          required: true
+          description: Preset number to store to
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Tuner preset stored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tuner/getPresetInfo:
+    get:
+      tags:
+        - tuner
+      summary: Get tuner preset info
+      description: Returns information about tuner presets
+      operationId: getTunerPresetInfo
+      parameters:
+        - name: band
+          in: query
+          required: true
+          description: Tuner band
+          schema:
+            type: string
+            enum:
+              - am
+              - fm
+              - dab
+      responses:
+        '200':
+          description: Tuner preset info retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tuner/getPlayInfo:
+    get:
+      tags:
+        - tuner
+      summary: Get tuner playing info
+      description: Returns information about the currently playing tuner station
+      operationId: getTunerPlayInfo
+      responses:
+        '200':
+          description: Tuner playing info retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tuner/setFreq:
+    get:
+      tags:
+        - tuner
+      summary: Set tuner frequency
+      description: Tunes to a specific frequency
+      operationId: setTunerFreq
+      parameters:
+        - name: band
+          in: query
+          required: true
+          description: Tuner band
+          schema:
+            type: string
+            enum:
+              - am
+              - fm
+              - dab
+        - name: tuning
+          in: query
+          required: true
+          description: Tuning method
+          schema:
+            type: string
+            enum:
+              - direct
+        - name: num
+          in: query
+          required: true
+          description: Frequency in KHz
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Tuner frequency set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /tuner/setDabService:
+    get:
+      tags:
+        - tuner
+      summary: Change DAB service
+      description: Switches to the next or previous DAB service
+      operationId: setDabService
+      parameters:
+        - name: dir
+          in: query
+          required: true
+          description: Direction to change service
+          schema:
+            type: string
+            enum:
+              - next
+              - previous
+      responses:
+        '200':
+          description: DAB service changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /netusb/getPresetInfo:
+    get:
+      tags:
+        - netusb
+      summary: Get network/USB preset info
+      description: Returns information about network and USB presets
+      operationId: getNetUsbPresetInfo
+      responses:
+        '200':
+          description: Preset info retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /netusb/getPlayInfo:
+    get:
+      tags:
+        - netusb
+      summary: Get current playing info
+      description: Returns information about the currently playing network/USB content including metadata and image link
+      operationId: getNetUsbPlayInfo
+      responses:
+        '200':
+          description: Playing info retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /netusb/getAccountStatus:
+    get:
+      tags:
+        - netusb
+      summary: Get account status
+      description: Returns the account status for streaming services
+      operationId: getAccountStatus
+      responses:
+        '200':
+          description: Account status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /netusb/recallPreset:
+    get:
+      tags:
+        - netusb
+      summary: Recall system preset
+      description: Recalls a saved system preset (for any source)
+      operationId: recallNetUsbPreset
+      parameters:
+        - name: zone
+          in: query
+          required: true
+          description: Zone identifier
+          schema:
+            type: string
+            default: main
+        - name: num
+          in: query
+          required: true
+          description: Preset number
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Preset recalled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /netusb/storePreset:
+    get:
+      tags:
+        - netusb
+      summary: Store system preset
+      description: Stores the current state as a system preset
+      operationId: storeNetUsbPreset
+      parameters:
+        - name: num
+          in: query
+          required: true
+          description: Preset number to store to
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Preset stored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /netusb/setPlayback:
+    get:
+      tags:
+        - transport
+      summary: Control playback
+      description: Controls playback and transport functions
+      operationId: setPlayback
+      parameters:
+        - name: playback
+          in: query
+          required: true
+          description: Playback command
+          schema:
+            type: string
+            enum:
+              - stop
+              - play
+              - pause
+              - previous
+              - next
+              - fast_reverse_start
+              - fast_reverse_end
+              - fast_forward_start
+              - fast_forward_end
+      responses:
+        '200':
+          description: Playback command executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /netusb/toggleRepeat:
+    get:
+      tags:
+        - transport
+      summary: Toggle repeat mode
+      description: Toggles the repeat playback mode
+      operationId: toggleRepeat
+      responses:
+        '200':
+          description: Repeat mode toggled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /netusb/toggleShuffle:
+    get:
+      tags:
+        - transport
+      summary: Toggle shuffle mode
+      description: Toggles the shuffle playback mode
+      operationId: toggleShuffle
+      responses:
+        '200':
+          description: Shuffle mode toggled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /netusb/getListInfo:
+    get:
+      tags:
+        - netusb
+      summary: Get list info
+      description: Retrieves metadata and list entries for browsing
+      operationId: getListInfo
+      parameters:
+        - name: input
+          in: query
+          required: true
+          description: Input ID (from /system/getFeatures)
+          schema:
+            type: string
+        - name: index
+          in: query
+          required: true
+          description: List offset from beginning
+          schema:
+            type: integer
+            minimum: 0
+        - name: size
+          in: query
+          required: true
+          description: Maximum list size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 8
+        - name: lang
+          in: query
+          required: false
+          description: Language code
+          schema:
+            type: string
+            default: en
+      responses:
+        '200':
+          description: List info retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
