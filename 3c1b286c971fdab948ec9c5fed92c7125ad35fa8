@@ -1,0 +1,34 @@
+OAuth 2.0 Flow: Browser → IC Canister → OAuth-Protected API
+
+Authorization Code Flow (Recommended)
+
+```mermaid
+sequenceDiagram
+    participant Browser as Browser User
+    participant Canister as IC Canister (Backend)
+    participant OAuth as OAuth Provider (e.g. Spotify)
+    participant API as OpenAPI Service
+
+    Browser->>Canister: 1. Request action
+    Canister->>Browser: 2. Return OAuth authorization URL
+    Browser->>OAuth: 3. Redirect to OAuth authorization
+    Browser<<->>OAuth: 4. User logs in & authorizes
+    OAuth->>Browser: 5. Redirect back with auth code
+    Browser->>Canister: 6. Send auth code
+    Canister->>OAuth: 7. Exchange code for tokens
+    OAuth->>Canister: 8. Return access token
+    Canister->>API: 9. Call API with access token
+    API->>Canister: 10. Return API response
+    Canister->>Browser: 11. Return result
+```
+
+Key Implementation Details:
+- Canister stores OAuth config (client ID, secret, redirect URI)
+- Token storage: Canister stores access/refresh tokens per user principal
+- HTTP outcalls: IC canisters use HTTP outcalls for OAuth provider and API
+- Security: Use PKCE, encrypt tokens, associate with IC identities
+
+Alternative: Client Credentials Flow
+- For canister-level access (not per-user)
+- Canister directly requests token using client credentials
+- No user interaction needed
