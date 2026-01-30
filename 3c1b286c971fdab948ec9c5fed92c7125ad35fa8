@@ -1,0 +1,24 @@
+TODO: Test Yamaha MusicCast API with home sound equipment
+
+Test the generated Motoko client against actual Yamaha MusicCast-compatible
+devices at home to verify:
+
+- Real-world API compatibility
+- Generated client functionality with actual hardware
+- Zone control, transport controls, tuner operations
+- Network/USB playback features
+- Power management commands
+- Error handling with real device responses
+
+This will validate the generated code works with production hardware and
+identify any edge cases or API quirks not captured in the OpenAPI spec.
+
+Test environment:
+- Home Yamaha sound equipment (MusicCast-compatible devices)
+- IC canister deployment (or local dfx for testing)
+- Real network environment with device discovery
+
+Expected outcomes:
+- Verify all generated API methods work correctly
+- Document any spec vs. implementation differences
+- Create integration test examples from real usage
