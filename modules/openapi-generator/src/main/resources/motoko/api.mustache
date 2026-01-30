@@ -111,21 +111,19 @@ module {
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
             // Success response (2xx): parse as expected return type
-            let responseText = switch (Text.decodeUtf8(response.body)) {
+            (switch (Text.decodeUtf8(response.body)) {
                 case (?text) text;
                 case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
-            };
-
-            let jsonBlob = switch (JSON.fromText(responseText, null)) {
+            }) |>
+            (switch (JSON.fromText(_, null)) {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
-            };
-
-            let result : ?{{{returnType}}} = from_candid(jsonBlob);
-            switch (result) {
+            }) |>
+            from_candid(_) : ?{{{returnType}}} |>
+            (switch (_) {
                 case (?value) value;
                 case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to {{{returnType}}}");
-            }
+            })
         } else {
             // Error response (4xx, 5xx): parse error models and throw
             let responseText = switch (Text.decodeUtf8(response.body)) {
