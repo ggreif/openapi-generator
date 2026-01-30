@@ -71,6 +71,7 @@ module {
         is_replicated : ?Bool;
         cycles : Nat;
     };
+
 {{#operation}}
     {{#summary}}
     /// {{{summary}}}
@@ -107,21 +108,63 @@ module {
         {{#returnType}}let response : CanisterHttpResponsePayload = {{/returnType}}{{^returnType}}ignore {{/returnType}}await (with cycles) http_request(request);
 
         {{#returnType}}
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            let jsonBlob = switch (JSON.fromText(responseText, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            };
 
-        let result : ?{{{returnType}}} = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to {{{returnType}}}");
+            let result : ?{{{returnType}}} = from_candid(jsonBlob);
+            switch (result) {
+                case (?value) value;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to {{{returnType}}}");
+            }
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+            {{#responses}}
+            {{^is2xx}}
+            {{#dataType}}
+            // Try parsing {{code}} response as {{{dataType}}}
+            if (response.status == {{code}}) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsed : ?{{{dataType}}} = from_candid(blob);
+                            switch (parsed) {
+                                case (?err) " - " # debug_show(err);
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP {{code}}: {{message}}" # errorDetail);
+            };
+            {{/dataType}}
+            {{^dataType}}
+            // {{code}}: {{message}} (no response body model defined)
+            if (response.status == {{code}}) {
+                throw Error.reject("HTTP {{code}}: {{message}}");
+            };
+            {{/dataType}}
+            {{/is2xx}}
+            {{/responses}}
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
         {{/returnType}}
     };

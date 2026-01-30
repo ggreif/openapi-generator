@@ -318,10 +318,10 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         //   - API keys in headers/query parameters
         //   - Other auth schemes defined in OpenAPI security definitions
 
-        // TODO: Response code processing is missing - need to add support for:
-        //   - Handling different HTTP response codes (200, 400, 401, 404, etc.)
-        //   - Mapping response codes to appropriate error handling
-        //   - Parsing error responses and throwing appropriate exceptions
+        // Response code processing is implemented in api.mustache template
+        // - HTTP status codes are checked before parsing (2xx vs 4xx/5xx)
+        // - Error responses use generated error models when available
+        // - Structured error details are included in thrown errors
 
         // Check if we need to import Map
         boolean needsMapImport = false;
