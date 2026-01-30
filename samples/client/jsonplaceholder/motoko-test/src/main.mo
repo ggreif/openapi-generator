@@ -14,6 +14,7 @@ persistent actor {
   transient let api = DefaultApi({
     baseUrl;
     accessToken = null;
+    max_response_bytes = null;
   });
 
   // Health check endpoint
