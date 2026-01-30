@@ -15,6 +15,7 @@ persistent actor {
     baseUrl;
     accessToken = null;
     max_response_bytes = null;
+    transform = null;
   });
 
   // Health check endpoint
