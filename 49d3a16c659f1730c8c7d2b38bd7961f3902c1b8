@@ -1,71 +1,242 @@
 TODO: Implement proper enum support with Motoko variant types
 
-Current state:
-- OpenAPI enum fields map to Text type
-- Examples: Pet.status, Order.status both generate as "?Text"
-- No type safety or exhaustiveness checking
+=== BREAKTHROUGH: serde renameKeys Option for Variant Mapping ===
 
-Desired implementation:
-- Generate separate variant type modules for enums
-- Example: Pet.status enum [available, pending, sold] → PetStatus.mo with variant type
-- Update models to reference variant types instead of Text
+The serde library's `renameKeys` option in `Options` works for BOTH record keys AND variant tags!
 
-Generated code should look like:
+**How it works:**
+- `JSON.fromText(jsonText, ?{ renameKeys = [("json-name", "motoko_name")] })`
+- `JSON.toText(candidBlob, [], ?{ renameKeys = [("motoko_name", "json-name")] })`
 
+The renameKeys array is applied during Candid encoding/decoding at these points:
+- Decoder.mo:892: `#Variant(get_renamed_key(renaming_map, variant_key), value)`
+- Encoder.mo:473: `let variant_key = get_renamed_key(renaming_map, variant.0)`
+
+**Example:**
 ```motoko
-// PetStatus.mo
-module {
-    public type PetStatus = {
-        #available;
-        #pending;
-        #sold;
-    };
-}
+// OpenAPI enum: ["blue-green", "red", "yellow"]
+// Motoko variant: { #blue_green; #red; #yellow }
 
-// Pet.mo
-import { type PetStatus } "./PetStatus";
+// Decoding JSON → Motoko:
+let options = {
+    Candid.defaultOptions with
+    renameKeys = [("blue-green", "blue_green")]
+};
+let #ok(blob) = JSON.fromText("{\"color\": \"blue-green\"}", ?options);
+let motoko_value : { color: ColorEnum } = from_candid(blob);
+// Result: { color = #blue_green }
 
-module {
-    public type Pet = {
-        status : ?PetStatus;  // Instead of ?Text
-    };
-}
+// Encoding Motoko → JSON:
+let options = {
+    Candid.defaultOptions with
+    renameKeys = [("blue_green", "blue-green")]
+};
+let blob = to_candid({ color = #blue_green });
+let #ok(jsonText) = JSON.toText(blob, [], ?options);
+// Result: "{\"color\": \"blue-green\"}"
 ```
 
-Benefits:
-- Type safety - compiler prevents invalid enum values
-- Pattern matching with exhaustiveness checking
-- Better IDE support (autocomplete, refactoring)
-- Matches Motoko idioms and best practices
+=== Current Implementation Status ===
 
-Implementation approach:
-1. Override postProcessModelsEnum() in MotokoClientCodegen.java
-2. Create enum.mustache template for variant types
-3. Update model.mustache with {{#isEnum}} conditionals
-4. Generate separate .mo files for each enum type
-5. Add imports to models that use enums
+✅ **Already Working:**
+- Enum type definitions generated as variant types (e.g., PostStatus.mo)
+- Models using enum types compile correctly
+- Type-safe pattern matching available
 
-Reference implementations:
-- Check Swift/Kotlin generators for enum handling patterns
-- See how they generate separate enum types
-- Study model.isEnum flag and allowableValues structure
+❌ **Missing:**
+- Runtime serialization/deserialization with correct enum value mapping
+- Generator doesn't pass renameKeys options during API calls
+- No handling of special characters (hyphens, spaces, etc.) in enum values
+- No handling of numeric enums
 
-Test cases:
-- Petstore Pet.status: [available, pending, sold]
-- Petstore Order.status: [placed, approved, delivered]
-- Single-value enums (like GeoJsonPolygon.type: ["Polygon"])
-- Enums in query parameters and request bodies
+=== Implementation Plan ===
 
-Priority: Medium (improves type safety and developer experience)
-Related: Part of comprehensive Motoko type system support
+**Phase 1: Generator Changes**
 
-TODO: Numeric enum Candid encoding - Current implementation wraps numeric OpenAPI enum values as #_100_, #_200_, etc. This is a simplified placeholder. Proper Candid encoding should either: (1) compute IDL hash of string representation using hash(id) = Sum(utf8(id)[i] * 223^(k-i)) mod 2^32, OR (2) treat integer enum values as pre-computed hash values and support round-tripping back to JSON. Need to determine correct semantics for integer enums in Candid context and implement proper serialization/deserialization.
+1. **Collect Enum Mappings (MotokoClientCodegen.java)**
+   - In `postProcessModelsEnum()` or similar hook:
+   - For each enum, collect mappings where Motoko name ≠ OpenAPI value
+   - Store as: `Map<String, List<Pair<String, String>>>`
+     - Key: enum type name
+     - Value: list of (motoko_name, openapi_value) pairs
+   - Examples needing mapping:
+     - "blue-green" → "blue_green"
+     - "100" → "_100_" (numeric enums)
+     - "Available Now!" → "Available_Now_"
 
-Additionally, check the service:candid metadata in deployed Wasm canisters to understand how numeric variants are represented in the Candid interface at runtime.
+2. **Generate Enum Mapping Modules**
+   - Create `EnumMappings.mo` module with:
+   ```motoko
+   module {
+       public let ColorEnumOptions = {
+           encode = [("blue_green", "blue-green")];
+           decode = [("blue-green", "blue_green")];
+       };
 
-CRITICAL TODO: Enum serialization/deserialization - The current implementation only generates Motoko variant type definitions but does NOT generate serialization/deserialization code. For runtime compatibility with OpenAPI JSON:
-1. Need helper functions to convert variant names back to original enum values (e.g., #blue_green → "blue-green")
-2. Need serialization in API calls to map variants to JSON strings before sending
-3. Need deserialization to parse JSON enum strings into variants when receiving
-4. Consider generating conversion functions in each enum module: toText(variant): Text and fromText(text): ?Variant
-5. Update api.mustache to use these converters instead of direct Candid serialization for enum types
+       public let StatusCodeOptions = {
+           encode = [("_200_", "200"), ("_404_", "404")];
+           decode = [("200", "_200_"), ("404", "_404_")];
+       };
+   }
+   ```
+
+3. **Update API Mustache Template**
+   - Modify `api.mustache` to use enum-specific options:
+   ```motoko
+   // Request body serialization
+   let requestOptions = {
+       Candid.defaultOptions with
+       renameKeys = EnumMappings.{{enumType}}Options.encode;
+   };
+   let requestBlob = to_candid(requestBody);
+   let #ok(requestJson) = JSON.toText(requestBlob, [], ?requestOptions);
+
+   // Response deserialization
+   let responseOptions = {
+       Candid.defaultOptions with
+       renameKeys = EnumMappings.{{enumType}}Options.decode;
+   };
+   let #ok(responseBlob) = JSON.fromText(responseText, ?responseOptions);
+   let response : ResponseType = from_candid(responseBlob);
+   ```
+
+4. **Detect Which Operations Need Enum Options**
+   - Analyze each operation's request/response schemas
+   - Mark operations that use enum types
+   - Generate conditional option application
+
+**Phase 2: Testing Strategy**
+
+1. **Unit Tests for Mapping Generation**
+   - Test enum value escaping logic
+   - Verify bidirectional mappings (encode/decode)
+   - Test edge cases:
+     - Single character: "a"
+     - All special chars: "!@#$%"
+     - Unicode: "café"
+     - Numbers: "100", "200"
+     - Mixed: "HTTP-200-OK"
+
+2. **Integration Tests**
+   - Create OpenAPI spec with diverse enum values:
+   ```yaml
+   ColorEnum:
+     type: string
+     enum: ["blue-green", "red", "yellow", "ultra-violet"]
+
+   HTTPStatusEnum:
+     type: integer
+     enum: [200, 404, 500]
+
+   AvailabilityEnum:
+     type: string
+     enum: ["Available Now!", "Out of Stock", "Pre-Order"]
+   ```
+
+3. **End-to-End Test Cases**
+   - Test A: Simple enum (no special chars)
+     - Verify: direct mapping, no renameKeys needed
+   - Test B: Hyphenated enum
+     - Request with `#blue_green` → API receives "blue-green"
+     - Response with "blue-green" → Motoko receives `#blue_green`
+   - Test C: Numeric enum
+     - Request with `#_200_` → API receives 200
+     - Response with 200 → Motoko receives `#_200_`
+   - Test D: Complex enum with spaces/punctuation
+     - Bidirectional round-trip verification
+
+4. **Runtime Validation**
+   - Deploy test canister
+   - Make actual HTTP outcalls
+   - Verify JSON payloads match OpenAPI spec exactly
+   - Verify Motoko receives correctly typed variants
+
+**Phase 3: Edge Cases & Special Handling**
+
+1. **Numeric Enums**
+   - Current: wraps as `#_100_`, `#_200_`
+   - Challenge: JSON expects integer 200, not string "200"
+   - Solution: Type-aware renaming in JSON encoder
+   - May need serde enhancement for integer variant values
+
+2. **Empty Variant Values**
+   - OpenAPI: `"status": "active"` (string with no associated data)
+   - Motoko: `{ #active }` (unit variant)
+   - Serde handles: `#Variant("active", #Null)`
+   - Ensure JSON outputs just the string, not `{"#active": null}`
+
+3. **Enum in Different Contexts**
+   - Query parameters: `?status=blue-green`
+   - Request body: `{"color": "blue-green"}`
+   - Response body: `{"result": "blue-green"}`
+   - All need consistent mapping
+
+4. **Multiple Enums in Single Operation**
+   - Merge renameKeys from multiple enum types
+   - Ensure no naming conflicts between different enums
+
+**Phase 4: Documentation & Examples**
+
+1. **Generator Documentation**
+   - Explain how enum mapping works
+   - Document EnumMappings.mo structure
+   - Show examples of special character handling
+
+2. **Generated Code Comments**
+   - Annotate enum types with original OpenAPI values
+   ```motoko
+   /// Color options
+   /// OpenAPI values: ["blue-green", "red", "yellow"]
+   public type ColorEnum = {
+       #blue_green;  // maps to "blue-green"
+       #red;         // maps to "red"
+       #yellow;      // maps to "yellow"
+   };
+   ```
+
+3. **User Guide**
+   - How to use enums in API calls
+   - Pattern matching examples
+   - Troubleshooting mapping issues
+
+=== Open Questions ===
+
+1. **Global vs Per-Operation Options?**
+   - Option A: Pass all enum mappings to every API call (simple, potentially wasteful)
+   - Option B: Analyze each operation, pass only relevant mappings (complex, optimal)
+   - Recommendation: Start with Option A, optimize to B if needed
+
+2. **Numeric Enum Candid Representation?**
+   - Current wrapping approach works for now
+   - May need deeper serde changes for proper integer variant support
+   - Consider: should numeric enums use a different Motoko representation?
+
+3. **Name Collision Handling?**
+   - What if two different enums both have "active" but different Motoko names?
+   - Need qualified renaming: "StatusEnum.active" vs "StateEnum.active"?
+
+4. **Performance Impact?**
+   - How much overhead does renameKeys add?
+   - Should we skip renameKeys when all enum values are valid Motoko identifiers?
+
+=== Success Criteria ===
+
+✅ Simple enums (lowercase, no special chars) work without modification
+✅ Hyphenated enums (e.g., "blue-green") serialize/deserialize correctly
+✅ Numeric enums (e.g., HTTP status codes) work bidirectionally
+✅ Enums with spaces/punctuation handled correctly
+✅ Type safety preserved (pattern matching, exhaustiveness checking)
+✅ Generated code typechecks with moc
+✅ End-to-end test passes with real HTTP outcalls
+✅ JSON payloads match OpenAPI spec exactly
+
+=== Related Issues ===
+
+- See Decoder.mo:892 for variant key renaming on decode
+- See Encoder.mo:473 for variant key renaming on encode
+- See Types.mo:113 for Options.renameKeys definition
+- Test examples in tests/JSON.Test.mo:139, tests/Candid.Test.mo:220
+
+Priority: HIGH (Critical for real-world API compatibility)
+Complexity: MEDIUM (Generator changes + thorough testing needed)
+Impact: HIGH (Enables proper enum support for all OpenAPI specs)
