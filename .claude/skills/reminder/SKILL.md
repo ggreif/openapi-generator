@@ -28,8 +28,8 @@ Manage repository-level TODOs and reminders using git notes. These are for meta-
 
 ### List all reminders
 ```bash
-git notes --ref=reminders list | while read note commit; do
-  echo "=== Commit: $(git log -1 --oneline $commit) ==="
+for commit in $(git notes --ref=reminders list | awk '{print $2}'); do
+  echo "=== $(git log -1 --oneline $commit) ==="
   git notes --ref=reminders show $commit
   echo
 done
