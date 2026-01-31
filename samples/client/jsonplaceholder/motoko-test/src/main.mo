@@ -2,12 +2,16 @@
 
 import { DefaultApi } "../generated/Apis/DefaultApi";
 import { type Post } "../generated/Models/Post";
+import { type GeoJsonFeature } "../generated/Models/GeoJsonFeature";
+import { type GeoJsonPolygon } "../generated/Models/GeoJsonPolygon";
 import Debug "mo:core/Debug";
 import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Int "mo:core/Int";
 import Text "mo:core/Text";
 import Error "mo:core/Error";
+import Blob "mo:core/Blob";
+import Float "mo:core/Float";
 
 persistent actor {
   transient let baseUrl = "https://jsonplaceholder.typicode.com";
@@ -32,6 +36,37 @@ persistent actor {
     is_replicated = null;
     cycles = 30_000_000_000; // 30B cycles - sufficient for most requests
   });
+
+  // Transform callback: Convert httpbin.org /anything response to GeoJSON Polygon
+  // This demonstrates the IC's transform callback feature for HTTP outcalls
+  public query func transformToGeoJson(args : {
+    response : { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob };
+    context : Blob;
+  }) : async { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob } {
+    // Create GeoJSON Polygon response body with triple-nested arrays
+    let geoJsonResponse = "{" #
+      "\"type\": \"Feature\"," #
+      "\"geometry\": {" #
+        "\"type\": \"Polygon\"," #
+        "\"coordinates\": [" #  // Level 1: array of rings
+          "[" #                  // Level 2: array of points in ring
+            "[-122.4194, 37.7749]," #  // Level 3: [lon, lat] pair
+            "[-122.4094, 37.7849]," #
+            "[-122.4294, 37.7849]," #
+            "[-122.4194, 37.7749]" #   // Close the ring
+          "]" #
+        "]" #
+      "}," #
+      "\"properties\": {}" #
+    "}";
+
+    // Return transformed response
+    {
+      status = args.response.status;
+      headers = args.response.headers;
+      body = Text.encodeUtf8(geoJsonResponse);
+    }
+  };
 
   // Health check endpoint
   public query func health() : async Text {
@@ -183,6 +218,51 @@ persistent actor {
       let errorMsg = Error.message(err);
       Debug.print("Unexpected error: " # errorMsg);
       "ERROR: Expected 200 but got error - " # errorMsg
+    }
+  };
+
+  // Test endpoint 11: Test GeoJSON Polygon with triple-nested arrays (via transform callback)
+  // This tests the full flow: HTTP outcall → transform callback → JSON deserialization → [[[Float]]]
+  public func testGeoJsonPolygon() : async Text {
+    Debug.print("Testing GeoJSON Polygon with [[[Float]]] via transform callback...");
+
+    // Create API client with transform callback that converts httpbin /json to GeoJSON
+    let geoJsonApi = DefaultApi({
+      baseUrl = httpbinUrl;
+      accessToken = null;
+      max_response_bytes = null;
+      transform = ?{
+        function = transformToGeoJson;
+        context = Blob.fromArray([]);
+      };
+      is_replicated = null;
+      cycles = 30_000_000_000;
+    });
+
+    try {
+      // Call httpbin.org /json, but transform converts it to GeoJSON Polygon
+      let feature = await geoJsonApi.getGeoJsonPolygon();
+
+      // Verify triple-nested array structure works
+      let ringCount = feature.geometry.coordinates.size();
+      let firstRing = feature.geometry.coordinates[0];
+      let pointCount = firstRing.size();
+      let firstPoint = firstRing[0];
+      let lon = firstPoint[0];
+      let lat = firstPoint[1];
+
+      Debug.print("SUCCESS: HTTP + transform + deserialization worked!");
+      Debug.print("Rings: " # Nat.toText(ringCount));
+      Debug.print("Points in first ring: " # Nat.toText(pointCount));
+      Debug.print("First coordinate: [" # Float.toText(lon) # ", " # Float.toText(lat) # "]");
+
+      "SUCCESS: [[[Float]]] HTTP+deserialization verified - Rings: " # Nat.toText(ringCount) #
+      ", Points: " # Nat.toText(pointCount) #
+      ", First coord: [" # Float.toText(lon) # ", " # Float.toText(lat) # "]"
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("ERROR: " # errorMsg);
+      "ERROR: Failed to test GeoJSON Polygon - " # errorMsg
     }
   };
 }

@@ -154,13 +154,36 @@
           }
         }
       }
+    },
+    "/anything": {
+      "get": {
+        "operationId": "getGeoJsonPolygon",
+        "summary": "Get a GeoJSON Polygon feature (tests nested arrays - uses httpbin /anything with transform)",
+        "responses": {
+          "200": {
+            "description": "Successful response with GeoJSON Feature containing Polygon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeoJsonFeature"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
       "Post": {
         "type": "object",
-        "required": ["id", "userId", "title", "body"],
+        "required": [
+          "id",
+          "userId",
+          "title",
+          "body"
+        ],
         "properties": {
           "id": {
             "type": "integer"
@@ -173,6 +196,67 @@
           },
           "body": {
             "type": "string"
+          }
+        }
+      },
+      "GeoJsonFeature": {
+        "type": "object",
+        "required": [
+          "type",
+          "geometry",
+          "properties"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "Feature"
+            ]
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeoJsonPolygon"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "GeoJsonPolygon": {
+        "type": "object",
+        "required": [
+          "type",
+          "coordinates"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "Polygon"
+            ]
+          },
+          "coordinates": {
+            "type": "array",
+            "description": "Array of linear rings (first is exterior, rest are holes). Triple-nested: [[[lon, lat], [lon, lat], ...]]",
+            "items": {
+              "type": "array",
+              "description": "Linear ring: array of positions",
+              "items": {
+                "type": "array",
+                "description": "Position: [longitude, latitude] pair",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 3
+              },
+              "minItems": 4
+            },
+            "minItems": 1
           }
         }
       }

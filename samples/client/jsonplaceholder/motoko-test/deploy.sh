@@ -97,6 +97,11 @@ echo
 echo "10. Testing GET https://httpbin.org/json (expects JSON success)..."
 dfx canister call api_test testGetJson
 
+# Test GeoJSON Polygon with triple-nested arrays via transform callback
+echo
+echo "11. Testing GeoJSON Polygon with [[[Float]]] type (via transform callback)..."
+dfx canister call api_test testGeoJsonPolygon
+
 echo
 echo "=== Tests Complete ==="
 echo
