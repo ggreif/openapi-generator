@@ -1,0 +1,31 @@
+---
+
+TODO: Improve OpenAPI "type": "object" → Motoko type mapping
+
+Current behavior:
+- OpenAPI schema { "type": "object" } maps to Motoko type `Any`
+- `Any` is an inferior type with limited capabilities:
+  - Cannot use debug_show() on Any values
+  - Cannot pattern match or inspect structure
+  - Essentially opaque without further type information
+
+Problem:
+- Generic object schemas are common in OpenAPI specs for:
+  - Flexible response bodies
+  - Extension points
+  - Dynamic content
+- Mapping to `Any` makes these values difficult to work with
+
+Possible improvements:
+1. Generate a proper record type with optional fields for known properties
+2. Use a more structured type like Map<Text, Variant> for dynamic objects
+3. Provide utility functions to inspect/convert Any values
+4. Warn in generated comments when Any is used
+5. Allow custom type mappings via generator config
+
+Example affected endpoints:
+- /status/500, /status/503 response 200 (should never happen scenarios)
+- Any endpoint with generic { "type": "object" } without properties
+
+Priority: Medium (affects developer experience with dynamic APIs)
+Related: Changed /status/200 to /json endpoint to avoid this issue
