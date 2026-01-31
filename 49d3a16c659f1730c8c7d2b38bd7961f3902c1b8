@@ -1,0 +1,60 @@
+TODO: Implement proper enum support with Motoko variant types
+
+Current state:
+- OpenAPI enum fields map to Text type
+- Examples: Pet.status, Order.status both generate as "?Text"
+- No type safety or exhaustiveness checking
+
+Desired implementation:
+- Generate separate variant type modules for enums
+- Example: Pet.status enum [available, pending, sold] → PetStatus.mo with variant type
+- Update models to reference variant types instead of Text
+
+Generated code should look like:
+
+```motoko
+// PetStatus.mo
+module {
+    public type PetStatus = {
+        #available;
+        #pending;
+        #sold;
+    };
+}
+
+// Pet.mo
+import { type PetStatus } "./PetStatus";
+
+module {
+    public type Pet = {
+        status : ?PetStatus;  // Instead of ?Text
+    };
+}
+```
+
+Benefits:
+- Type safety - compiler prevents invalid enum values
+- Pattern matching with exhaustiveness checking
+- Better IDE support (autocomplete, refactoring)
+- Matches Motoko idioms and best practices
+
+Implementation approach:
+1. Override postProcessModelsEnum() in MotokoClientCodegen.java
+2. Create enum.mustache template for variant types
+3. Update model.mustache with {{#isEnum}} conditionals
+4. Generate separate .mo files for each enum type
+5. Add imports to models that use enums
+
+Reference implementations:
+- Check Swift/Kotlin generators for enum handling patterns
+- See how they generate separate enum types
+- Study model.isEnum flag and allowableValues structure
+
+Test cases:
+- Petstore Pet.status: [available, pending, sold]
+- Petstore Order.status: [placed, approved, delivered]
+- Single-value enums (like GeoJsonPolygon.type: ["Polygon"])
+- Enums in query parameters and request bodies
+
+Priority: Medium (improves type safety and developer experience)
+Related: Part of comprehensive Motoko type system support
