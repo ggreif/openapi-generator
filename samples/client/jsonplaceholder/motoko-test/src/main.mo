@@ -105,12 +105,12 @@ persistent actor {
     Debug.print("Calling GET /nonexistent (expecting 404 error)...");
     try {
       let _ = await api.getNonexistent();
-      "ERROR: Expected 404 but request succeeded"
+      "✗ Expected 404 but request succeeded"
     } catch (err) {
       let errorMsg = Error.message(err);
       Debug.print("Caught expected error: " # errorMsg);
       if (Text.contains(errorMsg, #text "404")) {
-        "SUCCESS: Caught expected 404 error - " # errorMsg
+        "✓ Caught expected 404 error - " # errorMsg
       } else {
         "WARNING: Caught error but not 404 - " # errorMsg
       }
@@ -128,7 +128,7 @@ persistent actor {
       Debug.print("Caught error: " # errorMsg);
       // JSONPlaceholder returns HTTP 404 for non-existent post IDs
       if (Text.contains(errorMsg, #text "404")) {
-        "SUCCESS: Caught 404 error for non-existent post - " # errorMsg
+        "✓ Caught 404 error for non-existent post - " # errorMsg
       } else {
         "WARNING: Expected 404 but got different error - " # errorMsg
       }
@@ -146,7 +146,7 @@ persistent actor {
       Debug.print("Caught error: " # errorMsg);
       // JSONPlaceholder returns HTTP 404 for invalid post IDs (including negative)
       if (Text.contains(errorMsg, #text "404")) {
-        "SUCCESS: Caught 404 error for negative ID - " # errorMsg
+        "✓ Caught 404 error for negative ID - " # errorMsg
       } else {
         "WARNING: Expected 404 but got different error - " # errorMsg
       }
@@ -166,7 +166,7 @@ persistent actor {
       Debug.print("Caught error: " # errorMsg);
       // JSONPlaceholder returns HTTP 404 for non-integer IDs
       if (Text.contains(errorMsg, #text "404")) {
-        "SUCCESS: Caught 404 error for string 'deadbeef' - " # errorMsg
+        "✓ Caught 404 error for string 'deadbeef' - " # errorMsg
       } else {
         "WARNING: Expected 404 but got different error - " # errorMsg
       }
@@ -178,12 +178,12 @@ persistent actor {
     Debug.print("Calling GET https://httpbin.org/status/500 (expecting 500 error)...");
     try {
       let _ = await httpbinApi.getStatus500();
-      "ERROR: Expected 500 but request succeeded"
+      "✗ Expected 500 but request succeeded"
     } catch (err) {
       let errorMsg = Error.message(err);
       Debug.print("Caught expected error: " # errorMsg);
       if (Text.contains(errorMsg, #text "500")) {
-        "SUCCESS: Caught expected 500 error - " # errorMsg
+        "✓ Caught expected 500 error - " # errorMsg
       } else {
         "WARNING: Caught error but not 500 - " # errorMsg
       }
@@ -195,12 +195,12 @@ persistent actor {
     Debug.print("Calling GET https://httpbin.org/status/503 (expecting 503 error)...");
     try {
       let _ = await httpbinApi.getStatus503();
-      "ERROR: Expected 503 but request succeeded"
+      "✗ Expected 503 but request succeeded"
     } catch (err) {
       let errorMsg = Error.message(err);
       Debug.print("Caught expected error: " # errorMsg);
       if (Text.contains(errorMsg, #text "503")) {
-        "SUCCESS: Caught expected 503 error - " # errorMsg
+        "✓ Caught expected 503 error - " # errorMsg
       } else {
         "WARNING: Caught error but not 503 - " # errorMsg
       }
@@ -213,11 +213,11 @@ persistent actor {
     try {
       let response = await httpbinApi.getJson();
       Debug.print("Success: Received JSON response from httpbin.org");
-      "SUCCESS: Received JSON response from httpbin.org"
+      "✓ Received JSON response from httpbin.org"
     } catch (err) {
       let errorMsg = Error.message(err);
       Debug.print("Unexpected error: " # errorMsg);
-      "ERROR: Expected 200 but got error - " # errorMsg
+      "✗ Expected 200 but got error - " # errorMsg
     }
   };
 
@@ -251,18 +251,18 @@ persistent actor {
       let lon = firstPoint[0];
       let lat = firstPoint[1];
 
-      Debug.print("SUCCESS: HTTP + transform + deserialization worked!");
+      Debug.print("✓ HTTP + transform + deserialization worked!");
       Debug.print("Rings: " # Nat.toText(ringCount));
       Debug.print("Points in first ring: " # Nat.toText(pointCount));
       Debug.print("First coordinate: [" # Float.toText(lon) # ", " # Float.toText(lat) # "]");
 
-      "SUCCESS: [[[Float]]] HTTP+deserialization verified - Rings: " # Nat.toText(ringCount) #
+      "✓ [[[Float]]] HTTP+deserialization verified - Rings: " # Nat.toText(ringCount) #
       ", Points: " # Nat.toText(pointCount) #
       ", First coord: [" # Float.toText(lon) # ", " # Float.toText(lat) # "]"
     } catch (err) {
       let errorMsg = Error.message(err);
-      Debug.print("ERROR: " # errorMsg);
-      "ERROR: Failed to test GeoJSON Polygon - " # errorMsg
+      Debug.print("✗ " # errorMsg);
+      "✗ Failed to test GeoJSON Polygon - " # errorMsg
     }
   };
 }
