@@ -7,6 +7,27 @@ import { type {{import}} } "./{{import}}";
 {{/imports}}
 
 {{#model}}
+{{#isEnum}}
+// {{classname}}.mo
+{{#description}}
+/// {{{description}}}
+{{/description}}
+/// Enum values: {{#allowableValues}}{{#enumVars}}#{{name}}{{^-last}}, {{/-last}}{{/enumVars}}{{/allowableValues}}
+
+module {
+    public type {{classname}} = {
+{{#allowableValues}}
+{{#enumVars}}
+        {{#enumDescription}}
+        /// {{{enumDescription}}}
+        {{/enumDescription}}
+        #{{name}};
+{{/enumVars}}
+{{/allowableValues}}
+    };
+}
+{{/isEnum}}
+{{^isEnum}}
 // {{classname}}.mo
 {{#description}}
 /// {{{description}}}
@@ -22,5 +43,6 @@ module {
 {{/vars}}
     };
 }
+{{/isEnum}}
 {{/model}}
 {{/models}}

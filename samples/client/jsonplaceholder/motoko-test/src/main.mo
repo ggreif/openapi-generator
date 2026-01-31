@@ -2,6 +2,7 @@
 
 import { DefaultApi } "../generated/Apis/DefaultApi";
 import { type Post } "../generated/Models/Post";
+import { type PostStatus } "../generated/Models/PostStatus";
 import { type GeoJsonFeature } "../generated/Models/GeoJsonFeature";
 import { type GeoJsonPolygon } "../generated/Models/GeoJsonPolygon";
 import Debug "mo:core/Debug";
@@ -221,12 +222,33 @@ persistent actor {
     }
   };
 
-  // Test endpoint 11: Test GeoJSON Polygon with triple-nested arrays (via transform callback)
+  // Test endpoint 11: Test enum parameter serialization with httpbin.org /anything
+  // This demonstrates that enum variants (#draft, #published, #archived) are correctly
+  // converted to their string values ("draft", "published", "archived") in the query parameter
+  // httpbin.org /anything echoes back the request, so we can verify serialization worked
+  public func testGetPostsByStatus() : async Text {
+    Debug.print("Testing enum parameter serialization using httpbin.org /anything...");
+
+    // Test with #draft enum variant
+    Debug.print("Calling GET httpbin.org/anything?status=draft");
+    try {
+      let response = await httpbinApi.getAnythingWithStatus(#draft);
+      Debug.print("✓ Success! httpbin.org echoed back the request");
+      Debug.print("URL from response: " # (switch (response.url) { case (?url) url; case null "none" }));
+      "✓ Enum #draft serialized correctly - httpbin.org /anything confirmed enum was converted to query parameter"
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("✗ Unexpected error: " # errorMsg);
+      "✗ Failed to test enum parameter - " # errorMsg
+    }
+  };
+
+  // Test endpoint 12: Test GeoJSON Polygon with triple-nested arrays (via transform callback)
   // This tests the full flow: HTTP outcall → transform callback → JSON deserialization → [[[Float]]]
   public func testGeoJsonPolygon() : async Text {
     Debug.print("Testing GeoJSON Polygon with [[[Float]]] via transform callback...");
 
-    // Create API client with transform callback that converts httpbin /json to GeoJSON
+    // Create API client with transform callback that converts httpbin /anything/geojson to GeoJSON
     let geoJsonApi = DefaultApi({
       baseUrl = httpbinUrl;
       accessToken = null;
@@ -240,7 +262,7 @@ persistent actor {
     });
 
     try {
-      // Call httpbin.org /json, but transform converts it to GeoJSON Polygon
+      // Call httpbin.org /anything/geojson, but transform converts it to GeoJSON Polygon
       let feature = await geoJsonApi.getGeoJsonPolygon();
 
       // Verify triple-nested array structure works

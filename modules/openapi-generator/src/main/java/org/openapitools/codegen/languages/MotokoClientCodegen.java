@@ -9,6 +9,7 @@ import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.MapProperty;
 import io.swagger.models.properties.Property;
 import io.swagger.models.parameters.Parameter;
+import io.swagger.v3.oas.models.media.Schema;
 
 import java.io.File;
 import java.util.*;
@@ -165,6 +166,78 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
     }
 
     @Override
+    public String toEnumVarName(String name, String datatype) {
+        // Check for custom mapping
+        if (enumNameMapping.containsKey(name)) {
+            return enumNameMapping.get(name);
+        }
+
+        // Handle empty string
+        if (name == null || name.isEmpty()) {
+            return "empty";
+        }
+
+        // For purely numeric values (Candid-style), wrap with underscores
+        if (name.matches("^\\d+$")) {
+            return "_" + name + "_";
+        }
+
+        // Lowercase for Motoko variant convention (idiomatic, though not required)
+        String enumVarName = name.toLowerCase(Locale.ROOT);
+
+        // Replace special characters with underscores
+        // Motoko identifiers: [a-zA-Z_][a-zA-Z0-9_]*
+        enumVarName = enumVarName.replaceAll("[^a-zA-Z0-9_]", "_");
+
+        // Remove consecutive underscores
+        enumVarName = enumVarName.replaceAll("_+", "_");
+
+        // Remove leading/trailing underscores
+        enumVarName = enumVarName.replaceAll("^_+|_+$", "");
+
+        // If name starts with a number (but not purely numeric), prefix with underscore
+        if (enumVarName.matches("^\\d.*")) {
+            enumVarName = "_" + enumVarName;
+        }
+
+        // Fallback for invalid names after sanitization
+        if (enumVarName.isEmpty()) {
+            enumVarName = "value_" + Math.abs(name.hashCode());
+        }
+
+        // Escape reserved words
+        if (isReservedWord(enumVarName)) {
+            return escapeReservedWord(enumVarName);
+        }
+
+        return enumVarName;
+    }
+
+    @Override
+    public String toEnumName(CodegenProperty property) {
+        // Check for custom mapping
+        if (enumNameMapping.containsKey(property.name)) {
+            return enumNameMapping.get(property.name);
+        }
+
+        // Use the property's base name to create enum type name
+        String enumName = toModelName(property.baseName);
+
+        // Avoid collision with property variable name by checking if they would be identical
+        // For example, if property is "status", enum type should be "Status" not "status"
+        if (enumName.equals(property.name)) {
+            enumName = enumName + "Enum";
+        }
+
+        // Check for reserved word collision
+        if (isReservedWord(enumName)) {
+            enumName = escapeReservedWord(enumName);
+        }
+
+        return enumName;
+    }
+
+    @Override
     public String getTypeDeclaration(io.swagger.v3.oas.models.media.Schema schema) {
         // Handle array types: convert to Motoko syntax [ElementType]
         String result;
@@ -238,32 +311,134 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 parameter.dataType = "[" + parameter.items.dataType + "]";
             }
         }
+
+        // For enum parameters, ensure enumVars are built for template use
+        if (Boolean.TRUE.equals(parameter.isEnum) && parameter.allowableValues != null) {
+            @SuppressWarnings("unchecked")
+            List<Object> values = (List<Object>) parameter.allowableValues.get("values");
+
+            if (values != null && !values.isEmpty()) {
+                List<Map<String, Object>> enumVars = new ArrayList<>();
+                for (int i = 0; i < values.size(); i++) {
+                    Object value = values.get(i);
+                    Map<String, Object> enumVar = new HashMap<>();
+
+                    // Get the variant name using toEnumVarName
+                    String variantName = toEnumVarName(String.valueOf(value), parameter.dataType);
+
+                    enumVar.put("name", variantName);
+                    enumVar.put("value", String.valueOf(value));
+                    enumVar.put("isString", value instanceof String);
+
+                    // Mark the last item
+                    if (i == values.size() - 1) {
+                        enumVar.put("-last", true);
+                    }
+
+                    enumVars.add(enumVar);
+                }
+                parameter.allowableValues.put("enumVars", enumVars);
+            }
+        }
+    }
+
+    @Override
+    public CodegenModel fromModel(String name, Schema schema) {
+        CodegenModel model = super.fromModel(name, schema);
+
+        // For standalone enum schemas, ensure enumVars are built
+        if (Boolean.TRUE.equals(model.isEnum) && model.allowableValues != null) {
+            @SuppressWarnings("unchecked")
+            List<Object> values = (List<Object>) model.allowableValues.get("values");
+
+            if (values != null && !values.isEmpty()) {
+                List<Map<String, Object>> enumVars = new ArrayList<>();
+                for (int i = 0; i < values.size(); i++) {
+                    Object value = values.get(i);
+                    Map<String, Object> enumVar = new HashMap<>();
+
+                    // Get the variant name using toEnumVarName
+                    String variantName = toEnumVarName(String.valueOf(value), model.dataType);
+
+                    enumVar.put("name", variantName);
+                    enumVar.put("value", String.valueOf(value));
+                    enumVar.put("isString", value instanceof String);
+
+                    // Mark the last item
+                    if (i == values.size() - 1) {
+                        enumVar.put("-last", true);
+                    }
+
+                    enumVars.add(enumVar);
+                }
+                model.allowableValues.put("enumVars", enumVars);
+            }
+        }
+
+        return model;
+    }
+
+    @Override
+    public ModelsMap postProcessModelsEnum(ModelsMap objs) {
+        // Call parent to process enums with default logic
+        objs = super.postProcessModelsEnum(objs);
+
+        return objs;
     }
 
     @Override
     public ModelsMap postProcessModels(ModelsMap objs) {
-        // Call parent first
+        // Call parent first (which calls postProcessModelsEnum internally)
         objs = super.postProcessModels(objs);
-        // Process enum models
-        objs = postProcessModelsEnum(objs);
+
+        // Track enum models to add to imports
+        Set<String> enumModelNames = new HashSet<>();
 
         // Check if we need to import Map
         boolean needsMapImport = false;
 
-        // Check all model properties for Map usage
+        // Check all model properties for Map usage and enum references
         List<ModelMap> models = objs.getModels();
         if (models != null) {
             for (ModelMap modelMap : models) {
                 org.openapitools.codegen.CodegenModel model = modelMap.getModel();
-                if (model != null && model.vars != null) {
-                    for (org.openapitools.codegen.CodegenProperty prop : model.vars) {
-                        if (prop.dataType != null && prop.dataType.contains("Map<")) {
-                            needsMapImport = true;
-                            break;
+
+                if (model != null) {
+                    // Track if this model itself is an enum
+                    if (Boolean.TRUE.equals(model.isEnum)) {
+                        enumModelNames.add(model.classname);
+                        // Mark enum models for conditional template logic
+                        model.vendorExtensions.put("x-is-motoko-enum", true);
+                    }
+
+                    if (model.vars != null) {
+                        for (org.openapitools.codegen.CodegenProperty prop : model.vars) {
+                            // Check for Map usage
+                            if (prop.dataType != null && prop.dataType.contains("Map<")) {
+                                needsMapImport = true;
+                            }
+
+                            // Handle enum properties
+                            if (Boolean.TRUE.equals(prop.isEnum)) {
+                                // TODO: Inline enums need proper implementation to generate separate model files
+                                // For now, keep them as Text type
+                                // This is an inline enum - would need to generate a separate model for it
+                                // String enumTypeName = toEnumName(prop);
+                                // prop.datatypeWithEnum = enumTypeName;
+                                // prop.dataType = enumTypeName;
+                                // enumModelNames.add(enumTypeName);
+                            } else if (Boolean.TRUE.equals(prop.isEnumRef)) {
+                                // This is a reference to an existing enum
+                                // The datatypeWithEnum should already be set by DefaultCodegen
+                                if (prop.datatypeWithEnum != null) {
+                                    prop.vendorExtensions.put("x-is-motoko-enum", true);
+                                    prop.vendorExtensions.put("x-motoko-enum-type", prop.datatypeWithEnum);
+                                    enumModelNames.add(prop.datatypeWithEnum);
+                                }
+                            }
                         }
                     }
                 }
-                if (needsMapImport) break;
             }
         }
 
@@ -285,6 +460,11 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                                             "AnyType".equals(importName);   // Filter out AnyType - not yet implemented
                     if (isMappedType) {
                         im.put("isMappedType", "true");
+                    }
+
+                    // Mark enum imports
+                    if (enumModelNames.contains(importName)) {
+                        im.put("isEnum", "true");
                     }
                 }
             }

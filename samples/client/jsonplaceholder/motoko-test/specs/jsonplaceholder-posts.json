@@ -69,6 +69,38 @@
         }
       }
     },
+    "/posts/by-status": {
+      "get": {
+        "operationId": "getPostsByStatus",
+        "summary": "Get posts filtered by status (enum parameter test)",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PostStatus"
+            },
+            "description": "Filter posts by publication status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/nonexistent": {
       "get": {
         "operationId": "getNonexistent",
@@ -157,6 +189,45 @@
     },
     "/anything": {
       "get": {
+        "operationId": "getAnythingWithStatus",
+        "summary": "Test enum parameter serialization using httpbin.org /anything endpoint",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PostStatus"
+            },
+            "description": "Status enum to test serialization"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response echoing request details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "args": {
+                      "type": "object",
+                      "description": "Query parameters echoed back"
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "Request URL"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/anything/geojson": {
+      "get": {
         "operationId": "getGeoJsonPolygon",
         "summary": "Get a GeoJSON Polygon feature (tests nested arrays - uses httpbin /anything with transform)",
         "responses": {
@@ -196,8 +267,16 @@
           },
           "body": {
             "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PostStatus"
           }
         }
+      },
+      "PostStatus": {
+        "type": "string",
+        "description": "Post publication status",
+        "enum": ["draft", "published", "archived"]
       },
       "GeoJsonFeature": {
         "type": "object",

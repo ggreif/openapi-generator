@@ -97,9 +97,14 @@ echo
 echo "10. Testing GET https://httpbin.org/json (expects JSON success)..."
 dfx canister call api_test testGetJson
 
+# Test enum parameter serialization with /posts/by-status
+echo
+echo "11. Testing enum parameter serialization with /posts/by-status..."
+dfx canister call api_test testGetPostsByStatus
+
 # Test GeoJSON Polygon with triple-nested arrays via transform callback
 echo
-echo "11. Testing GeoJSON Polygon with [[[Float]]] type (via transform callback)..."
+echo "12. Testing GeoJSON Polygon with [[[Float]]] type (via transform callback)..."
 dfx canister call api_test testGeoJsonPolygon
 
 echo
