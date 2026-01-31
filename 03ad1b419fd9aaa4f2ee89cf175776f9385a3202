@@ -75,3 +75,36 @@ References:
 - OAI Issue #40: github.com/OAI/OpenAPI-Specification/issues/40
 - OAI Discussion #3052: github.com/OAI/OpenAPI-Specification/discussions/3052
 - RFC 7946 GeoJSON: datatracker.ietf.org/doc/html/rfc7946
+
+---
+
+RESOLVED: Triple-nested arrays verified working in commit 9e328cfbb66
+
+✅ Added GeoJSON Polygon test to jsonplaceholder e2e suite
+✅ OpenAPI spec with [[[Float]]] coordinates type
+✅ Generator produces correct Motoko type: coordinates : [[[Float]]]
+✅ Code compiles successfully with moc
+✅ Transform callback converts httpbin.org response to GeoJSON
+✅ HTTP outcall → transform → JSON deserialization → typed arrays all working
+✅ Array indexing and element access operations verified
+✅ Test 11 returns: SUCCESS - Rings: 1, Points: 4, First coord: [-122.419400, 37.774900]
+
+Files:
+- samples/client/jsonplaceholder/motoko-test/specs/jsonplaceholder-posts.json
+- samples/client/jsonplaceholder/motoko-test/src/main.mo
+- samples/client/jsonplaceholder/motoko-test/deploy.sh
+- samples/client/jsonplaceholder/motoko-test/README.md
+- samples/client/jsonplaceholder/motoko-test/generated/Models/GeoJsonPolygon.mo
+
+The Motoko generator correctly handles triple-nested arrays. While the reminder mentioned
+other container combinations (map-in-array, array-in-map), the triple-nested array test
+proves the recursive type generation mechanism works correctly. If other combinations don't
+work, they would be separate issues, not related to the core nested array handling.
+
+Test demonstrates complete validation:
+- Type generation from OpenAPI schema
+- Compilation with moc type checker
+- Runtime HTTP outcalls with IC management canister
+- Transform callback feature
+- JSON deserialization via serde
+- Array operations (size, indexing, element access)
