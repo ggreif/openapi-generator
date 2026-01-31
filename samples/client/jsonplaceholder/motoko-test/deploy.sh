@@ -32,11 +32,11 @@ fi
 echo "Starting local dfx replica..."
 dfx start --clean --background
 
-echo ""
+echo
 echo "Deploying api_test canister..."
 dfx deploy api_test
 
-echo ""
+echo
 echo "Adding cycles to canister for HTTP outcalls..."
 # First, fund the wallet canister with ICP (which gets converted to cycles)
 WALLET_ID=$(dfx identity get-wallet)
@@ -44,41 +44,41 @@ dfx ledger fabricate-cycles --canister "$WALLET_ID" --amount 10
 # Then deposit cycles from wallet to the api_test canister
 dfx canister deposit-cycles 100_000_000_000_000 api_test
 
-echo ""
+echo
 echo "=== Running Tests ==="
 
 # Test health check
-echo ""
+echo
 echo "1. Testing health check..."
 dfx canister call api_test health
 
 # Test GET all posts (limited to avoid timeout)
-echo ""
+echo
 echo "2. Testing GET first 5 posts..."
 dfx canister call api_test testGetFirstPosts '(5)'
 
 # Test GET single post
-echo ""
+echo
 echo "3. Testing GET /posts/1..."
 dfx canister call api_test testGetPostById '("1")'
 
 # Test nonexistent endpoint (expects 404 error)
-echo ""
+echo
 echo "4. Testing GET /nonexistent (expects 404 error)..."
 dfx canister call api_test testNonexistentEndpoint
 
 # Test high ID number
-echo ""
+echo
 echo "5. Testing GET /posts/999999 (high ID number)..."
 dfx canister call api_test testGetPostByHighId
 
 # Test negative ID number
-echo ""
+echo
 echo "6. Testing GET /posts/-1 (negative ID)..."
 dfx canister call api_test testGetPostByNegativeId
 
 # Test string ID
-echo ""
+echo
 echo "7. Testing GET /posts/deadbeef (string ID)..."
 dfx canister call api_test testGetPostByStringId
 
@@ -97,8 +97,8 @@ echo
 echo "10. Testing GET https://httpbin.org/json (expects JSON success)..."
 dfx canister call api_test testGetJson
 
-echo ""
+echo
 echo "=== Tests Complete ==="
-echo ""
+echo
 echo "To stop dfx: dfx stop"
 echo "To view logs: dfx canister logs api_test"
