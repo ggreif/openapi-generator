@@ -58,3 +58,5 @@ Test cases:
 
 Priority: Medium (improves type safety and developer experience)
 Related: Part of comprehensive Motoko type system support
+
+TODO: Numeric enum Candid encoding - Current implementation wraps numeric OpenAPI enum values as #_100_, #_200_, etc. This is a simplified placeholder. Proper Candid encoding should either: (1) compute IDL hash of string representation using hash(id) = Sum(utf8(id)[i] * 223^(k-i)) mod 2^32, OR (2) treat integer enum values as pre-computed hash values and support round-tripping back to JSON. Need to determine correct semantics for integer enums in Candid context and implement proper serialization/deserialization.
