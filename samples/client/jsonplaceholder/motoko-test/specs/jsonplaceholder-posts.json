@@ -132,17 +132,22 @@
         }
       }
     },
-    "/status/200": {
+    "/json": {
       "get": {
-        "operationId": "getStatus200",
-        "summary": "Get HTTP 200 success from httpbin.org (control test)",
+        "operationId": "getJson",
+        "summary": "Get JSON sample from httpbin.org (control test for 200 success)",
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful response with JSON content",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "slideshow": {
+                      "type": "object"
+                    }
+                  }
                 }
               }
             }

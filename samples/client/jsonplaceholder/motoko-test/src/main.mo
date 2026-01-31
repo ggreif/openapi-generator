@@ -173,12 +173,12 @@ persistent actor {
   };
 
   // Test endpoint 10: Test HTTP 200 from httpbin.org (control test)
-  public func testGetStatus200() : async Text {
-    Debug.print("Calling GET https://httpbin.org/status/200 (expecting success)...");
+  public func testGetJson() : async Text {
+    Debug.print("Calling GET https://httpbin.org/json (expecting JSON success)...");
     try {
-      let _ = await httpbinApi.getStatus200();
-      Debug.print("Success: Received 200 response from httpbin.org");
-      "SUCCESS: Received 200 response from httpbin.org"
+      let response = await httpbinApi.getJson();
+      Debug.print("Success: Received JSON response from httpbin.org");
+      "SUCCESS: Received JSON response from httpbin.org"
     } catch (err) {
       let errorMsg = Error.message(err);
       Debug.print("Unexpected error: " # errorMsg);

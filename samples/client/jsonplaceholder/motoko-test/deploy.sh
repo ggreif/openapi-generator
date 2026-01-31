@@ -94,8 +94,8 @@ dfx canister call api_test testGetStatus503
 
 # Test HTTP 200 from httpbin.org (control test)
 echo
-echo "10. Testing GET https://httpbin.org/status/200 (expects success)..."
-dfx canister call api_test testGetStatus200
+echo "10. Testing GET https://httpbin.org/json (expects JSON success)..."
+dfx canister call api_test testGetJson
 
 echo ""
 echo "=== Tests Complete ==="
