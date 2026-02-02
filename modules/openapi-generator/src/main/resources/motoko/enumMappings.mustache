@@ -1,0 +1,43 @@
+// EnumMappings.mo - Global identifier mappings for JSON serialization
+//
+// This module contains all identifier mappings for the entire API.
+// It provides bidirectional mappings for:
+// - Enum variant names with special characters
+// - Record field names with hyphens or reserved words
+//
+// These are used by serde's renameKeys option during JSON serialization.
+
+module {
+{{#allEnumTypes}}
+    // Mappings for {{name}} enum
+    public let {{name}}Options = {
+        encode = [
+{{#mappings}}
+            ("{{motokoName}}", "{{jsonValue}}"){{^-last}},{{/-last}}
+{{/mappings}}
+        ];
+        decode = [
+{{#mappings}}
+            ("{{jsonValue}}", "{{motokoName}}"){{^-last}},{{/-last}}
+{{/mappings}}
+        ];
+    };
+
+{{/allEnumTypes}}
+{{#allModelsWithEscapedFields}}
+    // Field mappings for {{name}} model
+    public let {{name}}FieldOptions = {
+        encode = [
+{{#mappings}}
+            ("{{motokoName}}", "{{jsonName}}"){{^-last}},{{/-last}}
+{{/mappings}}
+        ];
+        decode = [
+{{#mappings}}
+            ("{{jsonName}}", "{{motokoName}}"){{^-last}},{{/-last}}
+{{/mappings}}
+        ];
+    };
+
+{{/allModelsWithEscapedFields}}
+}

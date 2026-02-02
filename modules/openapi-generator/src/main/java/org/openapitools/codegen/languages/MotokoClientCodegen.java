@@ -46,6 +46,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         modelPackage = "Models";
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
         supportingFiles.add(new SupportingFile("mops.toml.mustache", "", "mops.toml"));
+        supportingFiles.add(new SupportingFile("enumMappings.mustache", "", "EnumMappings.mo"));
 
         // Motoko reserved words
         // Based on Motoko language specification
@@ -397,6 +398,10 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         // Check if we need to import Map
         boolean needsMapImport = false;
 
+        // Collect enum and field mappings for JSON serialization
+        Map<String, List<Map<String, String>>> enumMappings = new HashMap<>();
+        Map<String, List<Map<String, String>>> fieldMappings = new HashMap<>();
+
         // Check all model properties for Map usage and enum references
         List<ModelMap> models = objs.getModels();
         if (models != null) {
@@ -409,13 +414,32 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                         enumModelNames.add(model.classname);
                         // Mark enum models for conditional template logic
                         model.vendorExtensions.put("x-is-motoko-enum", true);
+
+                        // Collect enum variant mappings
+                        List<Map<String, String>> mappings = collectEnumMappings(model);
+                        if (!mappings.isEmpty()) {
+                            enumMappings.put(model.classname, mappings);
+                            model.vendorExtensions.put("x-has-enum-mappings", true);
+                            model.vendorExtensions.put("x-enum-mappings", mappings);
+                        }
                     }
 
                     if (model.vars != null) {
+                        // Collect field name mappings
+                        List<Map<String, String>> fieldEscapeMappings = new ArrayList<>();
+
                         for (org.openapitools.codegen.CodegenProperty prop : model.vars) {
                             // Check for Map usage
                             if (prop.dataType != null && prop.dataType.contains("Map<")) {
                                 needsMapImport = true;
+                            }
+
+                            // Collect escaped field names (where Motoko name differs from JSON name)
+                            if (!prop.baseName.equals(prop.name)) {
+                                Map<String, String> mapping = new HashMap<>();
+                                mapping.put("motokoName", prop.name);
+                                mapping.put("jsonName", prop.baseName);
+                                fieldEscapeMappings.add(mapping);
                             }
 
                             // Handle enum properties
@@ -437,10 +461,22 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                                 }
                             }
                         }
+
+                        // Store field mappings if any
+                        if (!fieldEscapeMappings.isEmpty()) {
+                            fieldMappings.put(model.classname, fieldEscapeMappings);
+                            model.vendorExtensions.put("x-has-field-mappings", true);
+                            model.vendorExtensions.put("x-field-mappings", fieldEscapeMappings);
+                        }
                     }
                 }
             }
         }
+
+        // Store mappings in context for templates
+        objs.put("enumMappings", enumMappings);
+        objs.put("fieldMappings", fieldMappings);
+        objs.put("hasAnyMappings", !enumMappings.isEmpty() || !fieldMappings.isEmpty());
 
         // Mark imports that are mapped types (primitives) or array/map types so they can be filtered out
         List<Map<String, String>> imports = objs.getImports();
@@ -489,6 +525,38 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         return objs;
     }
 
+    /**
+     * Collect enum variant mappings for JSON serialization.
+     * Returns a list of mappings where Motoko variant name differs from OpenAPI value.
+     */
+    private List<Map<String, String>> collectEnumMappings(CodegenModel model) {
+        List<Map<String, String>> mappings = new ArrayList<>();
+
+        if (model.allowableValues != null) {
+            Object enumVarsObj = model.allowableValues.get("enumVars");
+            if (enumVarsObj instanceof List<?>) {
+                List<?> enumVars = (List<?>) enumVarsObj;
+                for (Object enumVarObj : enumVars) {
+                    if (enumVarObj instanceof Map<?, ?>) {
+                        Map<?, ?> enumVar = (Map<?, ?>) enumVarObj;
+                        String motokoName = (String) enumVar.get("name");
+                        String jsonValue = (String) enumVar.get("value");
+
+                        // Only add mapping if names differ
+                        if (motokoName != null && jsonValue != null && !motokoName.equals(jsonValue)) {
+                            Map<String, String> mapping = new HashMap<>();
+                            mapping.put("motokoName", motokoName);
+                            mapping.put("jsonValue", jsonValue);
+                            mappings.add(mapping);
+                        }
+                    }
+                }
+            }
+        }
+
+        return mappings;
+    }
+
     @Override
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
@@ -502,6 +570,64 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         // - HTTP status codes are checked before parsing (2xx vs 4xx/5xx)
         // - Error responses use generated error models when available
         // - Structured error details are included in thrown errors
+
+        // Collect all enum types and models with escaped fields for global API context
+        List<Map<String, Object>> allEnumTypes = new ArrayList<>();
+        List<Map<String, Object>> allModelsWithEscapedFields = new ArrayList<>();
+
+        if (allModels != null) {
+            for (ModelMap modelMap : allModels) {
+                CodegenModel model = modelMap.getModel();
+
+                if (model != null) {
+                    // Collect enum types with mappings
+                    if (Boolean.TRUE.equals(model.isEnum) &&
+                        Boolean.TRUE.equals(model.vendorExtensions.get("x-has-enum-mappings"))) {
+                        Map<String, Object> enumInfo = new HashMap<>();
+                        enumInfo.put("name", model.classname);
+                        enumInfo.put("mappings", model.vendorExtensions.get("x-enum-mappings"));
+                        allEnumTypes.add(enumInfo);
+                    }
+
+                    // Collect models with escaped field names
+                    if (Boolean.TRUE.equals(model.vendorExtensions.get("x-has-field-mappings"))) {
+                        Map<String, Object> modelInfo = new HashMap<>();
+                        modelInfo.put("name", model.classname);
+                        modelInfo.put("mappings", model.vendorExtensions.get("x-field-mappings"));
+                        allModelsWithEscapedFields.add(modelInfo);
+                    }
+                }
+            }
+        }
+
+        // Mark first/last items for template iteration (Mustache uses these for comma handling)
+        // Clear any existing flags first
+        for (Map<String, Object> enumInfo : allEnumTypes) {
+            enumInfo.remove("-last");
+            enumInfo.remove("-first");
+        }
+        for (Map<String, Object> modelInfo : allModelsWithEscapedFields) {
+            modelInfo.remove("-last");
+            modelInfo.remove("-first");
+        }
+        // Set flags on boundary items
+        if (!allEnumTypes.isEmpty()) {
+            allEnumTypes.get(allEnumTypes.size() - 1).put("-last", true);
+        }
+        if (!allModelsWithEscapedFields.isEmpty()) {
+            allModelsWithEscapedFields.get(0).put("-first", true);
+            allModelsWithEscapedFields.get(allModelsWithEscapedFields.size() - 1).put("-last", true);
+        }
+
+        // Store in context for API template
+        result.put("allEnumTypes", allEnumTypes);
+        result.put("allModelsWithEscapedFields", allModelsWithEscapedFields);
+        result.put("hasAnyMappings", !allEnumTypes.isEmpty() || !allModelsWithEscapedFields.isEmpty());
+
+        // Also add to additionalProperties for supporting files (EnumMappings.mustache)
+        additionalProperties.put("allEnumTypes", allEnumTypes);
+        additionalProperties.put("allModelsWithEscapedFields", allModelsWithEscapedFields);
+        additionalProperties.put("hasAnyMappings", !allEnumTypes.isEmpty() || !allModelsWithEscapedFields.isEmpty());
 
         // Check if we need to import Map
         boolean needsMapImport = false;

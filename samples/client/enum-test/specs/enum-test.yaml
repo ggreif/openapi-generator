@@ -1,0 +1,159 @@
+openapi: 3.0.0
+info:
+  title: Enum Test API
+  version: 1.0.0
+  description: Test API for enum serialization with renameKeys
+
+paths:
+  /test-hyphenated-enum:
+    post:
+      operationId: testHyphenatedEnum
+      summary: Test hyphenated enum values
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                color:
+                  $ref: '#/components/schemas/HyphenatedColorEnum'
+              required:
+                - color
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  color:
+                    $ref: '#/components/schemas/HyphenatedColorEnum'
+                required:
+                  - color
+
+  /test-numeric-enum:
+    post:
+      operationId: testNumericEnum
+      summary: Test numeric enum values
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/HTTPStatusEnum'
+              required:
+                - status
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: '#/components/schemas/HTTPStatusEnum'
+                required:
+                  - status
+
+  /test-escaped-fields:
+    post:
+      operationId: testEscapedFields
+      summary: Test record fields with hyphens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HttpHeader'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpHeader'
+
+  /test-reserved-words:
+    post:
+      operationId: testReservedWords
+      summary: Test reserved word field names
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservedWordModel'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservedWordModel'
+
+components:
+  schemas:
+    SimpleColorEnum:
+      type: string
+      description: Simple enum without special characters
+      enum:
+        - red
+        - green
+        - blue
+
+    HyphenatedColorEnum:
+      type: string
+      description: Enum with hyphenated values
+      enum:
+        - blue-green
+        - red-orange
+        - yellow-green
+
+    HTTPStatusEnum:
+      type: integer
+      description: Numeric enum for HTTP status codes
+      enum:
+        - 200
+        - 404
+        - 500
+
+    AvailabilityEnum:
+      type: string
+      description: Enum with spaces and special characters
+      enum:
+        - Available Now!
+        - Out of Stock
+        - Pre-Order
+        - Coming Soon...
+
+    HttpHeader:
+      type: object
+      description: Model with hyphenated field names
+      properties:
+        content-type:
+          type: string
+        cache-control:
+          type: string
+        x-request-id:
+          type: string
+      required:
+        - content-type
+
+    ReservedWordModel:
+      type: object
+      description: Model with reserved word field names
+      properties:
+        try:
+          type: string
+        type:
+          type: string
+        switch:
+          type: integer
+      required:
+        - try

@@ -8,6 +8,9 @@ import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
+{{#hasAnyMappings}}
+import EnumMappings "../EnumMappings";
+{{/hasAnyMappings}}
 {{#useDfx}}
 import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 {{/useDfx}}
@@ -59,6 +62,19 @@ module {
     let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
 
 {{/useDfx}}
+{{#hasAnyMappings}}
+    // Global encoding/decoding options for JSON serialization
+    let allEncodeMappings : [(Text, Text)] = [{{#allEnumTypes}}{{#mappings}}
+        ("{{motokoName}}", "{{jsonValue}}"),{{/mappings}}{{/allEnumTypes}}{{#allModelsWithEscapedFields}}{{#mappings}}
+        ("{{motokoName}}", "{{jsonName}}"),{{/mappings}}{{/allModelsWithEscapedFields}}
+    ];
+
+    let allDecodeMappings : [(Text, Text)] = [{{#allEnumTypes}}{{#mappings}}
+        ("{{jsonValue}}", "{{motokoName}}"),{{/mappings}}{{/allEnumTypes}}{{#allModelsWithEscapedFields}}{{#mappings}}
+        ("{{jsonName}}", "{{motokoName}}"),{{/mappings}}{{/allModelsWithEscapedFields}}
+    ];
+
+{{/hasAnyMappings}}
 {{#operations}}
     type Config__ = {
         baseUrl : Text;
@@ -102,7 +118,7 @@ module {
             url;
             method = #{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}};
             headers;
-            body = {{#bodyParam}}do ? { let candidBlob = to_candid({{paramName}}); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) }{{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
+            body = {{#bodyParam}}do ? { let candidBlob = to_candid({{paramName}}); {{#hasAnyMappings}}let requestOptions = { Candid.defaultOptions with renameKeys = allEncodeMappings }; let #ok(jsonText) = JSON.toText(candidBlob, [], ?requestOptions){{/hasAnyMappings}}{{^hasAnyMappings}}let #ok(jsonText) = JSON.toText(candidBlob, [], null){{/hasAnyMappings}} else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) }{{/bodyParam}}{{^bodyParam}}null{{/bodyParam}};
         };
 
         // Call the management canister's http_request method with cycles
@@ -116,10 +132,21 @@ module {
                 case (?text) text;
                 case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
             }) |>
+            {{#hasAnyMappings}}
+            (do {
+                let responseOptions = { Candid.defaultOptions with renameKeys = allDecodeMappings };
+                switch (JSON.fromText(_, ?responseOptions)) {
+                    case (#ok(blob)) blob;
+                    case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+                }
+            }) |>
+            {{/hasAnyMappings}}
+            {{^hasAnyMappings}}
             (switch (JSON.fromText(_, null)) {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
+            {{/hasAnyMappings}}
             from_candid(_) : ?{{{returnType}}} |>
             (switch (_) {
                 case (?value) value;
@@ -138,7 +165,13 @@ module {
             // Try parsing {{code}} response as {{{dataType}}}
             if (response.status == {{code}}) {
                 let errorDetail = if (responseText != "") {
+                    {{#hasAnyMappings}}
+                    let errorOptions = { Candid.defaultOptions with renameKeys = allDecodeMappings };
+                    switch (JSON.fromText(responseText, ?errorOptions)) {
+                    {{/hasAnyMappings}}
+                    {{^hasAnyMappings}}
                     switch (JSON.fromText(responseText, null)) {
+                    {{/hasAnyMappings}}
                         case (#ok(blob)) {
                             let parsed : ?{{{dataType}}} = from_candid(blob);
                             switch (parsed) {
