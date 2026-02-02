@@ -243,6 +243,30 @@
           }
         }
       }
+    },
+    "/anything/enum-status": {
+      "get": {
+        "operationId": "getEnumStatus",
+        "summary": "Get enum status (tests enum with special characters - uses httpbin /anything with transform)",
+        "responses": {
+          "200": {
+            "description": "Successful response with object containing PostStatus enum",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status"],
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/PostStatus"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -275,8 +299,8 @@
       },
       "PostStatus": {
         "type": "string",
-        "description": "Post publication status",
-        "enum": ["draft", "published", "archived"]
+        "description": "Post publication status (with special characters to test enum mapping)",
+        "enum": ["in-progress", "published!", "archived-2023"]
       },
       "GeoJsonFeature": {
         "type": "object",

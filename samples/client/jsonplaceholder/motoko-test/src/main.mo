@@ -3,6 +3,7 @@
 import { DefaultApi } "../generated/Apis/DefaultApi";
 import { type Post } "../generated/Models/Post";
 import { type PostStatus } "../generated/Models/PostStatus";
+import { type GetEnumStatus200Response } "../generated/Models/GetEnumStatus200Response";
 import { type GeoJsonFeature } "../generated/Models/GeoJsonFeature";
 import { type GeoJsonPolygon } "../generated/Models/GeoJsonPolygon";
 import Debug "mo:core/Debug";
@@ -44,6 +45,13 @@ persistent actor {
     response : { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob };
     context : Blob;
   }) : async { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob } {
+    // Log what httpbin.org actually returned
+    let originalBody = switch (Text.decodeUtf8(args.response.body)) {
+      case (?text) text;
+      case null "Failed to decode";
+    };
+    Debug.print("transformToGeoJson received from httpbin: " # originalBody);
+
     // Create GeoJSON Polygon response body with triple-nested arrays
     let geoJsonResponse = "{" #
       "\"type\": \"Feature\"," #
@@ -58,14 +66,39 @@ persistent actor {
           "]" #
         "]" #
       "}," #
-      "\"properties\": {}" #
+      "\"properties\": {\"name\": null}" #
     "}";
 
-    // Return transformed response
-    {
-      status = args.response.status;
-      headers = args.response.headers;
+    Debug.print("transformToGeoJson returning JSON: " # geoJsonResponse);
+
+    // Return transformed response using 'with' to update only the body
+    { args.response with
       body = Text.encodeUtf8(geoJsonResponse);
+    }
+  };
+
+  // Transform callback: Convert httpbin.org /anything response to enum status
+  // Returns object with enum field containing special characters to test enum mapping (published!)
+  public query func transformToEnumStatus(args : {
+    response : { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob };
+    context : Blob;
+  }) : async { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob } {
+    // Log what httpbin.org actually returned
+    let originalBody = switch (Text.decodeUtf8(args.response.body)) {
+      case (?text) text;
+      case null "Failed to decode";
+    };
+    Debug.print("transformToEnumStatus received from httpbin: " # originalBody);
+
+    // Return JSON with enum in Candid variant format using Motoko-safe name
+    // renameKeys works on variant tags, so we use "published" (Motoko) not "published!" (OpenAPI)
+    let enumResponse = "{\"status\": {\"published\": null}}";
+
+    Debug.print("transformToEnumStatus returning JSON: " # enumResponse);
+
+    // Return transformed response using 'with' to update only the body
+    { args.response with
+      body = Text.encodeUtf8(enumResponse);
     }
   };
 
@@ -223,19 +256,19 @@ persistent actor {
   };
 
   // Test endpoint 11: Test enum parameter serialization with httpbin.org /anything
-  // This demonstrates that enum variants (#draft, #published, #archived) are correctly
-  // converted to their string values ("draft", "published", "archived") in the query parameter
+  // This demonstrates that enum variants (#in_progress, #published, #archived_2023) are correctly
+  // converted to their string values ("in-progress", "published!", "archived-2023") in the query parameter
   // httpbin.org /anything echoes back the request, so we can verify serialization worked
   public func testGetPostsByStatus() : async Text {
     Debug.print("Testing enum parameter serialization using httpbin.org /anything...");
 
-    // Test with #draft enum variant
-    Debug.print("Calling GET httpbin.org/anything?status=draft");
+    // Test with #in_progress enum variant (should serialize to "in-progress")
+    Debug.print("Calling GET httpbin.org/anything?status=in-progress");
     try {
-      let response = await httpbinApi.getAnythingWithStatus(#draft);
+      let response = await httpbinApi.getAnythingWithStatus(#in_progress);
       Debug.print("✓ Success! httpbin.org echoed back the request");
       Debug.print("URL from response: " # (switch (response.url) { case (?url) url; case null "none" }));
-      "✓ Enum #draft serialized correctly - httpbin.org /anything confirmed enum was converted to query parameter"
+      "✓ Enum #in_progress serialized correctly - httpbin.org /anything confirmed enum was converted to query parameter"
     } catch (err) {
       let errorMsg = Error.message(err);
       Debug.print("✗ Unexpected error: " # errorMsg);
@@ -285,6 +318,49 @@ persistent actor {
       let errorMsg = Error.message(err);
       Debug.print("✗ " # errorMsg);
       "✗ Failed to test GeoJSON Polygon - " # errorMsg
+    }
+  };
+
+  // Test endpoint 13: Test enum return type with special characters (via transform callback)
+  // This tests the full flow: HTTP outcall → transform → JSON enum deserialization with renameKeys
+  // Verifies that "published!" (JSON) correctly maps to #published (Motoko variant)
+  public func testEnumStatus() : async Text {
+    Debug.print("Testing enum return type with special characters via transform callback...");
+
+    // Create API client with transform callback that returns object with enum field
+    let enumApi = DefaultApi({
+      baseUrl = httpbinUrl;
+      accessToken = null;
+      max_response_bytes = null;
+      transform = ?{
+        function = transformToEnumStatus;
+        context = Blob.fromArray([]);
+      };
+      is_replicated = null;
+      cycles = 30_000_000_000;
+    });
+
+    try {
+      // Call httpbin.org /anything/enum-status, but transform returns {"status": {"published!": null}}
+      let response = await enumApi.getEnumStatus();
+
+      // Verify deserialization and enum mapping worked correctly
+      switch (response.status) {
+        case (#published) {
+          Debug.print("✓ Enum deserialized correctly: {\"published!\": null} → #published");
+          "✓ Enum mapping verified - JSON {\"published!\": null} correctly mapped to Motoko #published variant"
+        };
+        case (#in_progress) {
+          "✗ Wrong enum variant: expected #published but got #in_progress"
+        };
+        case (#archived_2023) {
+          "✗ Wrong enum variant: expected #published but got #archived_2023"
+        };
+      }
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("✗ " # errorMsg);
+      "✗ Failed to test enum return type - " # errorMsg
     }
   };
 }

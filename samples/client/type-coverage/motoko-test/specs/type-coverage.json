@@ -193,6 +193,33 @@
           }
         }
       }
+    },
+    "/enums": {
+      "get": {
+        "operationId": "getEnums",
+        "summary": "Test enum handling in request and response",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enum container response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnumContainer"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -512,6 +539,55 @@
           "object": {
             "type": "string",
             "description": "Motoko keyword for object literals"
+          }
+        }
+      },
+      "Status": {
+        "type": "string",
+        "description": "Basic enum test",
+        "enum": ["available", "pending", "sold"]
+      },
+      "Priority": {
+        "type": "string",
+        "description": "Reserved word collision test",
+        "enum": ["low", "medium", "high", "async", "type", "null"]
+      },
+      "Color": {
+        "type": "string",
+        "description": "Special characters test",
+        "enum": ["red", "blue-green", "dark gray", "#FF00FF"]
+      },
+      "NumericCode": {
+        "type": "integer",
+        "description": "Numeric enum - should remain Int",
+        "enum": [100, 200, 404, 500]
+      },
+      "EnumContainer": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "color": {
+            "$ref": "#/components/schemas/Color"
+          },
+          "code": {
+            "$ref": "#/components/schemas/NumericCode"
+          },
+          "simpleText": {
+            "type": "string",
+            "description": "Simple text field (inline enums to be implemented later)"
+          },
+          "statusArray": {
+            "type": "array",
+            "description": "Array of enum values",
+            "items": {
+              "$ref": "#/components/schemas/Status"
+            }
           }
         }
       }

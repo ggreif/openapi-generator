@@ -107,6 +107,11 @@ echo
 echo "12. Testing GeoJSON Polygon with [[[Float]]] type (via transform callback)..."
 dfx canister call api_test testGeoJsonPolygon
 
+# Test enum return type with special characters via transform callback
+echo
+echo "13. Testing enum return type with special characters (via transform callback)..."
+dfx canister call api_test testEnumStatus
+
 echo
 echo "=== Tests Complete ==="
 echo

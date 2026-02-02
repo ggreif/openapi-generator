@@ -7,9 +7,12 @@ import Text "mo:core/Text";
 import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Error "mo:core/Error";
-import { JSON } "mo:serde";
 {{#hasAnyMappings}}
+import { JSON; Candid } "mo:serde";
 import EnumMappings "../EnumMappings";
+{{/hasAnyMappings}}
+{{^hasAnyMappings}}
+import { JSON } "mo:serde";
 {{/hasAnyMappings}}
 {{#useDfx}}
 import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
