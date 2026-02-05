@@ -9,9 +9,9 @@ import { type HTTPStatusEnum; JSON = HTTPStatusEnum } "./HTTPStatusEnum";
 module {
     // Motoko-facing type: what application code uses
     public type FieldAndEnumMapping = {
-        statusMinuscode : HTTPStatusEnum;
-        availabilityMinusstatus : ?AvailabilityEnum;
-        contentMinustype : ?Text;
+        status_code : HTTPStatusEnum;
+        availability_status : ?AvailabilityEnum;
+        content_type : ?Text;
     };
 
     // JSON sub-module: everything needed for JSON serialization
@@ -19,25 +19,25 @@ module {
         // JSON-facing Motoko type: mirrors JSON structure
         // Named "JSON" to avoid shadowing the outer FieldAndEnumMapping type
         public type JSON = {
-            statusMinuscode : HTTPStatusEnum.JSON;
-            availabilityMinusstatus : ?AvailabilityEnum.JSON;
-            contentMinustype : ?Text;
+            status_code : HTTPStatusEnum.JSON;
+            availability_status : ?AvailabilityEnum.JSON;
+            content_type : ?Text;
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
         public func toJSON(value : FieldAndEnumMapping) : JSON = {
-            statusMinuscode = HTTPStatusEnum.toJSON(value.statusMinuscode);
-            availabilityMinusstatus = switch (value.availabilityMinusstatus) { case (?v) ?AvailabilityEnum.toJSON(v); case null null };
-            contentMinustype = value.contentMinustype;
+            status_code = HTTPStatusEnum.toJSON(value.status_code);
+            availability_status = switch (value.availability_status) { case (?v) ?AvailabilityEnum.toJSON(v); case null null };
+            content_type = value.content_type;
         };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
         public func fromJSON(json : JSON) : ?FieldAndEnumMapping {
-            let ?statusMinuscode = HTTPStatusEnum.fromJSON(json.statusMinuscode) else return null;
+            let ?status_code = HTTPStatusEnum.fromJSON(json.status_code) else return null;
             ?{
-                statusMinuscode;
-                availabilityMinusstatus = switch (json.availabilityMinusstatus) { case (?v) AvailabilityEnum.fromJSON(v); case null null };
-                contentMinustype = json.contentMinustype;
+                status_code;
+                availability_status = switch (json.availability_status) { case (?v) AvailabilityEnum.fromJSON(v); case null null };
+                content_type = json.content_type;
             }
         };
     }

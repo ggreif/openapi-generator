@@ -55,28 +55,28 @@ module {
     // Field mappings for FieldAndEnumMapping model
     public let FieldAndEnumMappingFieldOptions = {
         encode = [
-            ("statusMinuscode", "status-code"),
-            ("availabilityMinusstatus", "availability-status"),
-            ("contentMinustype", "content-type")
+            ("status_code", "status-code"),
+            ("availability_status", "availability-status"),
+            ("content_type", "content-type")
         ];
         decode = [
-            ("status-code", "statusMinuscode"),
-            ("availability-status", "availabilityMinusstatus"),
-            ("content-type", "contentMinustype")
+            ("status-code", "status_code"),
+            ("availability-status", "availability_status"),
+            ("content-type", "content_type")
         ];
     };
 
     // Field mappings for HttpHeader model
     public let HttpHeaderFieldOptions = {
         encode = [
-            ("contentMinustype", "content-type"),
-            ("cacheMinuscontrol", "cache-control"),
-            ("xMinusrequestMinusid", "x-request-id")
+            ("content_type", "content-type"),
+            ("cache_control", "cache-control"),
+            ("x_request_id", "x-request-id")
         ];
         decode = [
-            ("content-type", "contentMinustype"),
-            ("cache-control", "cacheMinuscontrol"),
-            ("x-request-id", "xMinusrequestMinusid")
+            ("content-type", "content_type"),
+            ("cache-control", "cache_control"),
+            ("x-request-id", "x_request_id")
         ];
     };
 

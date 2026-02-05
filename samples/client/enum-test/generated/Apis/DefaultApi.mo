@@ -84,7 +84,12 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let jsonValue = HttpHeader.toJSON(httpHeader); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = HttpHeader.toJSON(httpHeader);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
@@ -146,7 +151,12 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let jsonValue = TestHyphenatedEnumRequest.toJSON(testHyphenatedEnumRequest); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = TestHyphenatedEnumRequest.toJSON(testHyphenatedEnumRequest);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
@@ -208,7 +218,12 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let jsonValue = TestNumericEnumRequest.toJSON(testNumericEnumRequest); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = TestNumericEnumRequest.toJSON(testNumericEnumRequest);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
@@ -270,7 +285,12 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let jsonValue = ReservedWordModel.toJSON(reservedWordModel); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = ReservedWordModel.toJSON(reservedWordModel);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
@@ -332,7 +352,12 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let jsonValue = OuterRecord.toJSON(outerRecord); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = OuterRecord.toJSON(outerRecord);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles

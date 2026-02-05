@@ -143,6 +143,24 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         return toModelName(name);
     }
 
+    @Override
+    public String toVarName(String name) {
+        // Sanitize name but keep it as snake_case (convert hyphens to underscores)
+        name = name.replace("-", "_");
+
+        // Handle reserved words by appending underscore
+        if (isReservedWord(name)) {
+            name = escapeReservedWord(name);
+        }
+
+        // Ensure valid Motoko identifier (starts with letter or underscore)
+        if (!name.isEmpty() && !Character.isJavaIdentifierStart(name.charAt(0))) {
+            name = "_" + name;
+        }
+
+        return name;
+    }
+
     public void setProjectName(String projectName) {
         this.projectName = projectName;
     }

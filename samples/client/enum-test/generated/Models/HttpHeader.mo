@@ -5,9 +5,9 @@
 module {
     // Motoko-facing type: what application code uses
     public type HttpHeader = {
-        contentMinustype : Text;
-        cacheMinuscontrol : ?Text;
-        xMinusrequestMinusid : ?Text;
+        content_type : Text;
+        cache_control : ?Text;
+        x_request_id : ?Text;
     };
 
     // JSON sub-module: everything needed for JSON serialization
@@ -15,9 +15,9 @@ module {
         // JSON-facing Motoko type: mirrors JSON structure
         // Named "JSON" to avoid shadowing the outer HttpHeader type
         public type JSON = {
-            contentMinustype : Text;
-            cacheMinuscontrol : ?Text;
-            xMinusrequestMinusid : ?Text;
+            content_type : Text;
+            cache_control : ?Text;
+            x_request_id : ?Text;
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
