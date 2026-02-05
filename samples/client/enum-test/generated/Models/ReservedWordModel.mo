@@ -21,19 +21,9 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : ReservedWordModel) : JSON = {
-            try_ = value.try_;
-            type_ = switch (value.type_) { case (?v) ?v; case null null };
-            switch_ = switch (value.switch_) { case (?v) ?v; case null null };
-        };
+        public func toJSON(value : ReservedWordModel) : JSON = value;
 
         // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?ReservedWordModel {
-            ?{
-                try_ = json.try_;
-                type_ = json.type_;
-                switch_ = json.switch_;
-            }
-        };
+        public func fromJSON(json : JSON) : ?ReservedWordModel = ?json;
     }
 }

@@ -498,6 +498,10 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                     if (hasEnumFields) {
                         model.vendorExtensions.put("x-needs-json-module", true);
                         model.vendorExtensions.put("xNeedsJsonModule", true);
+                    } else {
+                        // Model has no enum fields - can use record update syntax for identity transform
+                        model.vendorExtensions.put("x-no-enum-fields", true);
+                        model.vendorExtensions.put("xNoEnumFields", true);
                     }
                 }
             }

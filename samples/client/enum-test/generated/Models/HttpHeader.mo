@@ -21,19 +21,9 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : HttpHeader) : JSON = {
-            contentMinustype = value.contentMinustype;
-            cacheMinuscontrol = switch (value.cacheMinuscontrol) { case (?v) ?v; case null null };
-            xMinusrequestMinusid = switch (value.xMinusrequestMinusid) { case (?v) ?v; case null null };
-        };
+        public func toJSON(value : HttpHeader) : JSON = value;
 
         // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?HttpHeader {
-            ?{
-                contentMinustype = json.contentMinustype;
-                cacheMinuscontrol = json.cacheMinuscontrol;
-                xMinusrequestMinusid = json.xMinusrequestMinusid;
-            }
-        };
+        public func fromJSON(json : JSON) : ?HttpHeader = ?json;
     }
 }

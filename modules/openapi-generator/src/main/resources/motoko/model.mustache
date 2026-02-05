@@ -84,14 +84,14 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : {{classname}}) : JSON = {
+        public func toJSON(value : {{classname}}) : JSON = {{#vendorExtensions.xNoEnumFields}}value{{/vendorExtensions.xNoEnumFields}}{{^vendorExtensions.xNoEnumFields}}{
 {{#vars}}
-            {{name}} = {{#required}}{{#isEnumRef}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/isEnumRef}}{{^isEnumRef}}value.{{name}}{{/isEnumRef}}{{/required}}{{^required}}switch (value.{{name}}) { case (?v) {{#isEnumRef}}?{{{datatypeWithEnum}}}.toJSON(v){{/isEnumRef}}{{^isEnumRef}}?v{{/isEnumRef}}; case null null }{{/required}};
+            {{name}} = {{#required}}{{#isEnumRef}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/isEnumRef}}{{^isEnumRef}}value.{{name}}{{/isEnumRef}}{{/required}}{{^required}}{{#isEnumRef}}switch (value.{{name}}) { case (?v) ?{{{datatypeWithEnum}}}.toJSON(v); case null null }{{/isEnumRef}}{{^isEnumRef}}value.{{name}}{{/isEnumRef}}{{/required}};
 {{/vars}}
-        };
+        }{{/vendorExtensions.xNoEnumFields}};
 
         // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?{{classname}} {
+        public func fromJSON(json : JSON) : ?{{classname}} {{#vendorExtensions.xNoEnumFields}}= ?json{{/vendorExtensions.xNoEnumFields}}{{^vendorExtensions.xNoEnumFields}}{
 {{#vars}}
 {{#required}}
 {{#isEnumRef}}
@@ -104,7 +104,7 @@ module {
                 {{name}}{{#required}}{{^isEnumRef}} = json.{{name}}{{/isEnumRef}}{{/required}}{{^required}} = {{#isEnumRef}}switch (json.{{name}}) { case (?v) {{{datatypeWithEnum}}}.fromJSON(v); case null null }{{/isEnumRef}}{{^isEnumRef}}json.{{name}}{{/isEnumRef}}{{/required}};
 {{/vars}}
             }
-        };
+        }{{/vendorExtensions.xNoEnumFields}};
     }
 }
 {{/isEnum}}
