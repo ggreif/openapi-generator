@@ -143,3 +143,60 @@ This pattern is used in OpenAPI-generated Motoko clients where:
 - Models have JSON-facing types (Text, Nat, etc.) that mirror JSON structure
 - Conversion functions bridge between the two representations
 - No runtime type introspection or serde modifications needed
+
+## When NOT to Use This Pattern
+
+1. **For primitive types**: Don't use this for built-in types like `Text`, `Nat`, `Bool`, etc.
+2. **For types without JSON sub-modules**: Only use when the imported module has a `JSON` sub-module
+3. **For non-Janus types**: This pattern is specific to Janus Types - don't use for regular imports
+
+## IMPORTANT: Never Create Model Files for Primitives
+
+**Primitive types should NEVER have corresponding `.mo` model files:**
+
+```motoko
+// ❌ WRONG - Never create Any.mo, Text.mo, Int.mo, etc.
+// These are built-in Motoko types and don't need model files
+
+// ❌ WRONG - Never import primitives as if they were models
+import { type Any; JSON = Any } "./Any";  // DON'T DO THIS!
+
+// ✅ CORRECT - Use primitives directly
+let value : Any = ...;  // Just use the type directly
+```
+
+**Primitive types that should NOT have model files:**
+- `Any` - generic any type (used for `object` in OpenAPI)
+- `Text` - strings
+- `Nat`, `Int` - numbers
+- `Float` - floating point
+- `Bool` - booleans
+- `Blob` - binary data
+- `Principal` - IC principals
+- `Null` - null type
+
+**Why this matters:**
+1. Primitive types don't need JSON conversion (they're already JSON-compatible)
+2. Creating `Any.mo` would shadow the built-in `Any` type
+3. The generator detects primitives and skips `.JSON` conversion automatically
+4. Attempting to import non-existent model files causes compilation errors
+
+**Detection in generator:**
+The OpenAPI generator's `isPrimitiveOrMappedType()` method detects these types and:
+- Skips creating model files for them
+- Avoids `.JSON` type references (uses `?Any` not `?Any.JSON`)
+- Uses direct serialization (no `toJSON`/`fromJSON` calls)
+
+**Example: Correct handling of primitives in generated code**
+
+```motoko
+// API response with primitive type
+public func getJson(config : Config__) : async* Any {
+    // ...
+    from_candid(_) : ?Any |>  // ✅ Direct ?Any, not ?Any.JSON
+    (switch (_) {
+        case (?result) result;  // ✅ No fromJSON call needed
+        case null throw Error.reject("Failed to deserialize");
+    })
+}
+```
