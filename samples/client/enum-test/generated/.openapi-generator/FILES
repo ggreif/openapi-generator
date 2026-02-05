@@ -1,0 +1,13 @@
+.openapi-generator-ignore
+Apis/DefaultApi.mo
+EnumMappings.mo
+Models/AvailabilityEnum.mo
+Models/HTTPStatusEnum.mo
+Models/HttpHeader.mo
+Models/HyphenatedColorEnum.mo
+Models/ReservedWordModel.mo
+Models/SimpleColorEnum.mo
+Models/TestHyphenatedEnumRequest.mo
+Models/TestNumericEnumRequest.mo
+README.md
+mops.toml

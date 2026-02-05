@@ -2,7 +2,7 @@
 {{#imports}}
 {{#isMap}}import { type Map } "mo:core/pure/Map";
 {{/isMap}}{{^isMappedType}}
-import { type {{import}} } "./{{import}}";
+import { type {{import}}; JSON = {{import}} } "./{{import}}";
 {{/isMappedType}}
 {{/imports}}
 
@@ -15,6 +15,7 @@ import { type {{import}} } "./{{import}}";
 /// Enum values: {{#allowableValues}}{{#enumVars}}#{{name}}{{^-last}}, {{/-last}}{{/enumVars}}{{/allowableValues}}
 
 module {
+    // Motoko-facing type: type-safe variants for application code
     public type {{classname}} = {
 {{#allowableValues}}
 {{#enumVars}}
@@ -25,6 +26,44 @@ module {
 {{/enumVars}}
 {{/allowableValues}}
     };
+
+    // JSON sub-module: everything needed for JSON serialization
+    public module JSON {
+        // JSON-facing Motoko type: mirrors JSON structure
+        // Named "JSON" to avoid shadowing the outer {{classname}} type
+        public type JSON = {{dataType}};
+
+        // Convert Motoko-facing type to JSON-facing Motoko type
+        public func toJSON(value : {{classname}}) : JSON {
+            switch (value) {
+{{#allowableValues}}
+{{#enumVars}}
+                case (#{{name}}) {{#isString}}"{{value}}"{{/isString}}{{^isString}}{{value}}{{/isString}};
+{{/enumVars}}
+{{/allowableValues}}
+            }
+        };
+
+        // Convert JSON-facing Motoko type to Motoko-facing type
+        public func fromJSON(json : JSON) : ?{{classname}} {
+{{#allowableValues}}
+{{#enumVars}}
+{{#-first}}
+{{#isString}}
+            switch (json) {
+{{/isString}}
+{{^isString}}
+            if (json < 0) return null;
+            switch (Int.abs(json)) {
+{{/isString}}
+{{/-first}}
+                case {{#isString}}"{{value}}"{{/isString}}{{^isString}}{{value}}{{/isString}} ?#{{name}};
+{{/enumVars}}
+{{/allowableValues}}
+                case _ null;
+            }
+        };
+    }
 }
 {{/isEnum}}
 {{^isEnum}}
@@ -34,6 +73,7 @@ module {
 {{/description}}
 
 module {
+    // Motoko-facing type: what application code uses
     public type {{classname}} = {
 {{#vars}}
         {{#description}}
@@ -42,6 +82,42 @@ module {
         {{name}} : {{^required}}?{{/required}}{{{dataType}}};
 {{/vars}}
     };
+
+    // JSON sub-module: everything needed for JSON serialization
+    public module JSON {
+        // JSON-facing Motoko type: mirrors JSON structure
+        // Named "JSON" to avoid shadowing the outer {{classname}} type
+        public type JSON = {
+{{#vars}}
+            {{name}} : {{^required}}?{{/required}}{{#isEnumRef}}{{{datatypeWithEnum}}}.JSON{{/isEnumRef}}{{^isEnumRef}}{{{dataType}}}{{/isEnumRef}};
+{{/vars}}
+        };
+
+        // Convert Motoko-facing type to JSON-facing Motoko type
+        public func toJSON(value : {{classname}}) : JSON {
+            {
+{{#vars}}
+                {{name}} = {{#required}}{{#isEnumRef}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/isEnumRef}}{{^isEnumRef}}value.{{name}}{{/isEnumRef}}{{/required}}{{^required}}switch (value.{{name}}) { case (?v) {{#isEnumRef}}?{{{datatypeWithEnum}}}.toJSON(v){{/isEnumRef}}{{^isEnumRef}}?v{{/isEnumRef}}; case null null }{{/required}};
+{{/vars}}
+            }
+        };
+
+        // Convert JSON-facing Motoko type to Motoko-facing type
+        public func fromJSON(json : JSON) : ?{{classname}} {
+{{#vars}}
+{{#required}}
+{{#isEnumRef}}
+            let ?{{name}} = {{{datatypeWithEnum}}}.fromJSON(json.{{name}}) else return null;
+{{/isEnumRef}}
+{{/required}}
+{{/vars}}
+            ?{
+{{#vars}}
+                {{name}}{{#required}}{{^isEnumRef}} = json.{{name}}{{/isEnumRef}}{{/required}}{{^required}} = {{#isEnumRef}}switch (json.{{name}}) { case (?v) {{{datatypeWithEnum}}}.fromJSON(v); case null null }{{/isEnumRef}}{{^isEnumRef}}json.{{name}}{{/isEnumRef}}{{/required}};
+{{/vars}}
+            }
+        };
+    }
 }
 {{/isEnum}}
 {{/model}}

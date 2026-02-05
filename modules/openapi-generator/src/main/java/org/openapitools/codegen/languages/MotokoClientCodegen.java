@@ -404,15 +404,25 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
         // Check all model properties for Map usage and enum references
         List<ModelMap> models = objs.getModels();
+
+        // FIRST PASS: Collect all enum model names
+        if (models != null) {
+            for (ModelMap modelMap : models) {
+                org.openapitools.codegen.CodegenModel model = modelMap.getModel();
+                if (model != null && Boolean.TRUE.equals(model.isEnum)) {
+                    enumModelNames.add(model.classname);
+                }
+            }
+        }
+
+        // SECOND PASS: Process all models with full enum knowledge
         if (models != null) {
             for (ModelMap modelMap : models) {
                 org.openapitools.codegen.CodegenModel model = modelMap.getModel();
 
                 if (model != null) {
-                    // Track if this model itself is an enum
+                    // Mark enum models for conditional template logic
                     if (Boolean.TRUE.equals(model.isEnum)) {
-                        enumModelNames.add(model.classname);
-                        // Mark enum models for conditional template logic
                         model.vendorExtensions.put("x-is-motoko-enum", true);
 
                         // Collect enum variant mappings
@@ -423,6 +433,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                             model.vendorExtensions.put("x-enum-mappings", mappings);
                         }
                     }
+
+                    // Track if this model has any enum fields (needs JSON sub-module)
+                    boolean hasEnumFields = false;
 
                     if (model.vars != null) {
                         // Collect field name mappings
@@ -456,9 +469,20 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                                 // The datatypeWithEnum should already be set by DefaultCodegen
                                 if (prop.datatypeWithEnum != null) {
                                     prop.vendorExtensions.put("x-is-motoko-enum", true);
+                                    prop.vendorExtensions.put("xIsMotokoEnum", true);
                                     prop.vendorExtensions.put("x-motoko-enum-type", prop.datatypeWithEnum);
+                                    prop.vendorExtensions.put("xMotokoEnumType", prop.datatypeWithEnum);
                                     enumModelNames.add(prop.datatypeWithEnum);
+                                    hasEnumFields = true;
                                 }
+                            } else if (enumModelNames.contains(prop.dataType)) {
+                                // Property's dataType matches an enum model name
+                                // This catches cases where isEnumRef might not be set correctly
+                                prop.vendorExtensions.put("x-is-motoko-enum", true);
+                                prop.vendorExtensions.put("xIsMotokoEnum", true);
+                                prop.vendorExtensions.put("x-motoko-enum-type", prop.dataType);
+                                prop.vendorExtensions.put("xMotokoEnumType", prop.dataType);
+                                hasEnumFields = true;
                             }
                         }
 
@@ -468,6 +492,12 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                             model.vendorExtensions.put("x-has-field-mappings", true);
                             model.vendorExtensions.put("x-field-mappings", fieldEscapeMappings);
                         }
+                    }
+
+                    // Mark models that need JSON sub-modules (have enum fields)
+                    if (hasEnumFields) {
+                        model.vendorExtensions.put("x-needs-json-module", true);
+                        model.vendorExtensions.put("xNeedsJsonModule", true);
                     }
                 }
             }
