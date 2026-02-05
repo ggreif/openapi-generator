@@ -18,10 +18,8 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : TestHyphenatedEnumRequest) : JSON {
-            {
-                color = HyphenatedColorEnum.toJSON(value.color);
-            }
+        public func toJSON(value : TestHyphenatedEnumRequest) : JSON = {
+            color = HyphenatedColorEnum.toJSON(value.color);
         };
 
         // Convert JSON-facing Motoko type to Motoko-facing type

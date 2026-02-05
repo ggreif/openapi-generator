@@ -18,10 +18,8 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : TestNumericEnumRequest) : JSON {
-            {
-                status = HTTPStatusEnum.toJSON(value.status);
-            }
+        public func toJSON(value : TestNumericEnumRequest) : JSON = {
+            status = HTTPStatusEnum.toJSON(value.status);
         };
 
         // Convert JSON-facing Motoko type to Motoko-facing type

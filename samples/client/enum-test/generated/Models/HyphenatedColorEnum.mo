@@ -18,22 +18,20 @@ module {
         public type JSON = Text;
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : HyphenatedColorEnum) : JSON {
+        public func toJSON(value : HyphenatedColorEnum) : JSON =
             switch (value) {
                 case (#blue_green) "blue-green";
                 case (#red_orange) "red-orange";
                 case (#yellow_green) "yellow-green";
-            }
-        };
+            };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?HyphenatedColorEnum {
+        public func fromJSON(json : JSON) : ?HyphenatedColorEnum =
             switch (json) {
                 case "blue-green" ?#blue_green;
                 case "red-orange" ?#red_orange;
                 case "yellow-green" ?#yellow_green;
                 case _ null;
-            }
-        };
+            };
     }
 }

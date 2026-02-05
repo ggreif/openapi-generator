@@ -76,26 +76,21 @@ module {
         public type JSON = Text;
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(status : PostStatus) : JSON {
+        public func toJSON(status : PostStatus) : JSON =
             switch (status) {
                 case (#in_progress) "in-progress";
                 case (#published) "published!";
                 case (#archived_2023) "archived-2023";
-            }
-        };
+            };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
-        // TODO: Consider whether this should return ?PostStatus or just PostStatus
-        //       Option type allows graceful handling of invalid JSON strings (returns null)
-        //       Plain type would trap on invalid input (simpler but less flexible)
-        public func fromJSON(json : JSON) : ?PostStatus {
+        public func fromJSON(json : JSON) : ?PostStatus =
             switch (json) {
                 case "in-progress" ?#in_progress;
                 case "published!" ?#published;
                 case "archived-2023" ?#archived_2023;
                 case _ null;
-            }
-        };
+            };
     }
 }
 ```
@@ -120,18 +115,14 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(response : GetEnumStatus200Response) : JSON {
-            {
-                status = PostStatus.toJSON(response.status);
-            }
+        public func toJSON(response : GetEnumStatus200Response) : JSON = {
+            status = PostStatus.toJSON(response.status);
         };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
         public func fromJSON(json : JSON) : ?GetEnumStatus200Response {
-            switch (PostStatus.fromJSON(json.status)) {
-                case (?status) ?{ status };
-                case null null;
-            }
+            let ?status = PostStatus.fromJSON(json.status) else return null;
+            ?{ status }
         };
     }
 }
@@ -252,14 +243,13 @@ With parallel type hierarchies, `renameKeys` is simplified to **only handle fiel
    public type HTTPStatus = { #_200_; #_404_; #_500_ };
    public module JSON {
        public type JSON = Int;  // JSON-facing: actual numbers (use Int for OpenAPI integer type)
-       public func toJSON(status : HTTPStatus) : JSON {
+       public func toJSON(status : HTTPStatus) : JSON =
            switch (status) {
                case (#_200_) 200;
                case (#_404_) 404;
                case (#_500_) 500;
-           }
-       };
-       public func fromJSON(json : JSON) : ?HTTPStatus {
+           };
+       public func fromJSON(json : JSON) : ?HTTPStatus =
            // Since Nat is a subtype of Int, we can directly match Int values against Nat patterns
            // Negative values naturally fall through to the default case
            switch (json) {
@@ -267,8 +257,7 @@ With parallel type hierarchies, `renameKeys` is simplified to **only handle fiel
                case 404 ?#_404_;
                case 500 ?#_500_;
                case _ null;
-           }
-       };
+           };
    }
    ```
 

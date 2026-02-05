@@ -34,34 +34,25 @@ module {
         public type JSON = {{dataType}};
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : {{classname}}) : JSON {
+        public func toJSON(value : {{classname}}) : JSON =
             switch (value) {
 {{#allowableValues}}
 {{#enumVars}}
                 case (#{{name}}) {{#isString}}"{{value}}"{{/isString}}{{^isString}}{{value}}{{/isString}};
 {{/enumVars}}
 {{/allowableValues}}
-            }
-        };
+            };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?{{classname}} {
+        public func fromJSON(json : JSON) : ?{{classname}} =
+            switch (json) {
 {{#allowableValues}}
 {{#enumVars}}
-{{#-first}}
-{{#isString}}
-            switch (json) {
-{{/isString}}
-{{^isString}}
-            switch (json) {
-{{/isString}}
-{{/-first}}
                 case {{#isString}}"{{value}}"{{/isString}}{{^isString}}{{value}}{{/isString}} ?#{{name}};
 {{/enumVars}}
 {{/allowableValues}}
                 case _ null;
-            }
-        };
+            };
     }
 }
 {{/isEnum}}
@@ -93,12 +84,10 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : {{classname}}) : JSON {
-            {
+        public func toJSON(value : {{classname}}) : JSON = {
 {{#vars}}
-                {{name}} = {{#required}}{{#isEnumRef}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/isEnumRef}}{{^isEnumRef}}value.{{name}}{{/isEnumRef}}{{/required}}{{^required}}switch (value.{{name}}) { case (?v) {{#isEnumRef}}?{{{datatypeWithEnum}}}.toJSON(v){{/isEnumRef}}{{^isEnumRef}}?v{{/isEnumRef}}; case null null }{{/required}};
+            {{name}} = {{#required}}{{#isEnumRef}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/isEnumRef}}{{^isEnumRef}}value.{{name}}{{/isEnumRef}}{{/required}}{{^required}}switch (value.{{name}}) { case (?v) {{#isEnumRef}}?{{{datatypeWithEnum}}}.toJSON(v){{/isEnumRef}}{{^isEnumRef}}?v{{/isEnumRef}}; case null null }{{/required}};
 {{/vars}}
-            }
         };
 
         // Convert JSON-facing Motoko type to Motoko-facing type

@@ -18,22 +18,20 @@ module {
         public type JSON = Text;
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : SimpleColorEnum) : JSON {
+        public func toJSON(value : SimpleColorEnum) : JSON =
             switch (value) {
                 case (#red) "red";
                 case (#green) "green";
                 case (#blue) "blue";
-            }
-        };
+            };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?SimpleColorEnum {
+        public func fromJSON(json : JSON) : ?SimpleColorEnum =
             switch (json) {
                 case "red" ?#red;
                 case "green" ?#green;
                 case "blue" ?#blue;
                 case _ null;
-            }
-        };
+            };
     }
 }

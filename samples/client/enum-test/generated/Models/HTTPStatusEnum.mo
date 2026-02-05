@@ -18,22 +18,20 @@ module {
         public type JSON = Int;
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : HTTPStatusEnum) : JSON {
+        public func toJSON(value : HTTPStatusEnum) : JSON =
             switch (value) {
                 case (#_200_) 200;
                 case (#_404_) 404;
                 case (#_500_) 500;
-            }
-        };
+            };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?HTTPStatusEnum {
+        public func fromJSON(json : JSON) : ?HTTPStatusEnum =
             switch (json) {
                 case 200 ?#_200_;
                 case 404 ?#_404_;
                 case 500 ?#_500_;
                 case _ null;
-            }
-        };
+            };
     }
 }
