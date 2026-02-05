@@ -677,6 +677,44 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             }
         }
 
+        // SIXTH PASS: Count transformed fields for record-update optimization
+        for (CodegenModel model : allModels) {
+            // Skip enum models - they don't have record fields
+            if (Boolean.TRUE.equals(model.isEnum)) {
+                continue;
+            }
+
+            if (model.vars != null && !model.vars.isEmpty()) {
+                int totalFields = model.vars.size();
+                int transformedFields = 0;
+
+                // Count fields that need transformation
+                for (CodegenProperty prop : model.vars) {
+                    // A field needs transformation if it's an enum reference or needs JSON conversion
+                    // Check both isEnumRef and the vendor extension we set
+                    boolean needsTransform = Boolean.TRUE.equals(prop.isEnumRef) ||
+                                            Boolean.TRUE.equals(prop.vendorExtensions.get("xIsMotokoEnum")) ||
+                                            Boolean.TRUE.equals(prop.vendorExtensions.get("xNeedsJsonConversion"));
+                    if (needsTransform) {
+                        transformedFields++;
+                    }
+                }
+
+                // Store the counts
+                model.vendorExtensions.put("x-total-fields", totalFields);
+                model.vendorExtensions.put("x-transform-count", transformedFields);
+
+                // Determine optimization strategy:
+                // - If transformedFields == 0: use identity (already handled by xNoEnumFields)
+                // - If 0 < transformedFields < totalFields: use record-update syntax (with)
+                // - If transformedFields == totalFields: construct fresh record
+                if (transformedFields > 0 && transformedFields < totalFields) {
+                    model.vendorExtensions.put("x-has-partial-transform", true);
+                    model.vendorExtensions.put("xHasPartialTransform", true);
+                }
+            }
+        }
+
         return objs;
     }
 

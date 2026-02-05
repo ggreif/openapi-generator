@@ -84,14 +84,50 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : {{classname}}) : JSON = {{#vendorExtensions.xNoEnumFields}}value{{/vendorExtensions.xNoEnumFields}}{{^vendorExtensions.xNoEnumFields}}{
+        public func toJSON(value : {{classname}}) : JSON = {{#vendorExtensions.xNoEnumFields}}value{{/vendorExtensions.xNoEnumFields}}{{^vendorExtensions.xNoEnumFields}}{{#vendorExtensions.xHasPartialTransform}}{ value with
+{{#vars}}
+{{#isEnumRef}}
+            {{name}} = {{#required}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/required}}{{^required}}switch (value.{{name}}) { case (?v) ?{{{datatypeWithEnum}}}.toJSON(v); case null null }{{/required}};
+{{/isEnumRef}}
+{{^isEnumRef}}
+{{#vendorExtensions.xNeedsJsonConversion}}
+            {{name}} = {{#required}}{{{dataType}}}.toJSON(value.{{name}}){{/required}}{{^required}}switch (value.{{name}}) { case (?v) ?{{{dataType}}}.toJSON(v); case null null }{{/required}};
+{{/vendorExtensions.xNeedsJsonConversion}}
+{{/isEnumRef}}
+{{/vars}}
+        }{{/vendorExtensions.xHasPartialTransform}}{{^vendorExtensions.xHasPartialTransform}}{
 {{#vars}}
             {{name}} = {{#required}}{{#isEnumRef}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/isEnumRef}}{{^isEnumRef}}{{#vendorExtensions.xNeedsJsonConversion}}{{{dataType}}}.toJSON(value.{{name}}){{/vendorExtensions.xNeedsJsonConversion}}{{^vendorExtensions.xNeedsJsonConversion}}value.{{name}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}}{{^required}}{{#isEnumRef}}switch (value.{{name}}) { case (?v) ?{{{datatypeWithEnum}}}.toJSON(v); case null null }{{/isEnumRef}}{{^isEnumRef}}{{#vendorExtensions.xNeedsJsonConversion}}switch (value.{{name}}) { case (?v) ?{{{dataType}}}.toJSON(v); case null null }{{/vendorExtensions.xNeedsJsonConversion}}{{^vendorExtensions.xNeedsJsonConversion}}value.{{name}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}};
 {{/vars}}
-        }{{/vendorExtensions.xNoEnumFields}};
+        }{{/vendorExtensions.xHasPartialTransform}}{{/vendorExtensions.xNoEnumFields}};
 
         // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?{{classname}} {{#vendorExtensions.xNoEnumFields}}= ?json{{/vendorExtensions.xNoEnumFields}}{{^vendorExtensions.xNoEnumFields}}{
+        public func fromJSON(json : JSON) : ?{{classname}} {{#vendorExtensions.xNoEnumFields}}= ?json{{/vendorExtensions.xNoEnumFields}}{{^vendorExtensions.xNoEnumFields}}{{#vendorExtensions.xHasPartialTransform}}{
+{{#vars}}
+{{#required}}
+{{#isEnumRef}}
+            let ?{{name}} = {{{datatypeWithEnum}}}.fromJSON(json.{{name}}) else return null;
+{{/isEnumRef}}
+{{^isEnumRef}}
+{{#vendorExtensions.xNeedsJsonConversion}}
+            let ?{{name}} = {{{dataType}}}.fromJSON(json.{{name}}) else return null;
+{{/vendorExtensions.xNeedsJsonConversion}}
+{{/isEnumRef}}
+{{/required}}
+{{/vars}}
+            ?{ json with
+{{#vars}}
+{{#isEnumRef}}
+                {{name}}{{#required}}{{/required}}{{^required}} = switch (json.{{name}}) { case (?v) {{{datatypeWithEnum}}}.fromJSON(v); case null null }{{/required}};
+{{/isEnumRef}}
+{{^isEnumRef}}
+{{#vendorExtensions.xNeedsJsonConversion}}
+                {{name}}{{#required}}{{/required}}{{^required}} = switch (json.{{name}}) { case (?v) {{{dataType}}}.fromJSON(v); case null null }{{/required}};
+{{/vendorExtensions.xNeedsJsonConversion}}
+{{/isEnumRef}}
+{{/vars}}
+            }
+        }{{/vendorExtensions.xHasPartialTransform}}{{^vendorExtensions.xHasPartialTransform}}{
 {{#vars}}
 {{#required}}
 {{#isEnumRef}}
@@ -109,7 +145,7 @@ module {
                 {{name}}{{#required}}{{^isEnumRef}}{{^vendorExtensions.xNeedsJsonConversion}} = json.{{name}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}}{{^required}} = {{#isEnumRef}}switch (json.{{name}}) { case (?v) {{{datatypeWithEnum}}}.fromJSON(v); case null null }{{/isEnumRef}}{{^isEnumRef}}{{#vendorExtensions.xNeedsJsonConversion}}switch (json.{{name}}) { case (?v) {{{dataType}}}.fromJSON(v); case null null }{{/vendorExtensions.xNeedsJsonConversion}}{{^vendorExtensions.xNeedsJsonConversion}}json.{{name}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}};
 {{/vars}}
             }
-        }{{/vendorExtensions.xNoEnumFields}};
+        }{{/vendorExtensions.xHasPartialTransform}}{{/vendorExtensions.xNoEnumFields}};
     }
 }
 {{/isEnum}}
