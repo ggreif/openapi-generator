@@ -4,12 +4,11 @@ import Text "mo:core/Text";
 import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Error "mo:core/Error";
-import { JSON; Candid } "mo:serde";
-import EnumMappings "../EnumMappings";
-import { type HttpHeader } "../Models/HttpHeader";
-import { type ReservedWordModel } "../Models/ReservedWordModel";
-import { type TestHyphenatedEnumRequest } "../Models/TestHyphenatedEnumRequest";
-import { type TestNumericEnumRequest } "../Models/TestNumericEnumRequest";
+import { JSON } "mo:serde";
+import { type HttpHeader; JSON = HttpHeader } "../Models/HttpHeader";
+import { type ReservedWordModel; JSON = ReservedWordModel } "../Models/ReservedWordModel";
+import { type TestHyphenatedEnumRequest; JSON = TestHyphenatedEnumRequest } "../Models/TestHyphenatedEnumRequest";
+import { type TestNumericEnumRequest; JSON = TestNumericEnumRequest } "../Models/TestNumericEnumRequest";
 
 module {
     // Management Canister interface for HTTP outcalls
@@ -51,45 +50,6 @@ module {
 
     let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
 
-    // Global encoding/decoding options for JSON serialization
-    let allEncodeMappings : [(Text, Text)] = [
-        ("available_now", "Available Now!"),
-        ("out_of_stock", "Out of Stock"),
-        ("pre_order", "Pre-Order"),
-        ("coming_soon", "Coming Soon..."),
-        ("_200_", "200"),
-        ("_404_", "404"),
-        ("_500_", "500"),
-        ("blue_green", "blue-green"),
-        ("red_orange", "red-orange"),
-        ("yellow_green", "yellow-green"),
-        ("contentMinustype", "content-type"),
-        ("cacheMinuscontrol", "cache-control"),
-        ("xMinusrequestMinusid", "x-request-id"),
-        ("try_", "try"),
-        ("type_", "type"),
-        ("switch_", "switch"),
-    ];
-
-    let allDecodeMappings : [(Text, Text)] = [
-        ("Available Now!", "available_now"),
-        ("Out of Stock", "out_of_stock"),
-        ("Pre-Order", "pre_order"),
-        ("Coming Soon...", "coming_soon"),
-        ("200", "_200_"),
-        ("404", "_404_"),
-        ("500", "_500_"),
-        ("blue-green", "blue_green"),
-        ("red-orange", "red_orange"),
-        ("yellow-green", "yellow_green"),
-        ("content-type", "contentMinustype"),
-        ("cache-control", "cacheMinuscontrol"),
-        ("x-request-id", "xMinusrequestMinusid"),
-        ("try", "try_"),
-        ("type", "type_"),
-        ("switch", "switch_"),
-    ];
-
     type Config__ = {
         baseUrl : Text;
         accessToken : ?Text;
@@ -123,7 +83,7 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let candidBlob = to_candid(httpHeader); let requestOptions = { Candid.defaultOptions with renameKeys = allEncodeMappings }; let #ok(jsonText) = JSON.toText(candidBlob, [], ?requestOptions) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? { let jsonValue = HttpHeader.toJSON(httpHeader); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
         };
 
         // Call the management canister's http_request method with cycles
@@ -136,12 +96,9 @@ module {
                 case (?text) text;
                 case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
             }) |>
-            (do {
-                let responseOptions = { Candid.defaultOptions with renameKeys = allDecodeMappings };
-                switch (JSON.fromText(_, ?responseOptions)) {
-                    case (#ok(blob)) blob;
-                    case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
-                }
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
             from_candid(_) : ?HttpHeader |>
             (switch (_) {
@@ -183,7 +140,7 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let candidBlob = to_candid(testHyphenatedEnumRequest); let requestOptions = { Candid.defaultOptions with renameKeys = allEncodeMappings }; let #ok(jsonText) = JSON.toText(candidBlob, [], ?requestOptions) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? { let jsonValue = TestHyphenatedEnumRequest.toJSON(testHyphenatedEnumRequest); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
         };
 
         // Call the management canister's http_request method with cycles
@@ -196,12 +153,9 @@ module {
                 case (?text) text;
                 case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
             }) |>
-            (do {
-                let responseOptions = { Candid.defaultOptions with renameKeys = allDecodeMappings };
-                switch (JSON.fromText(_, ?responseOptions)) {
-                    case (#ok(blob)) blob;
-                    case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
-                }
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
             from_candid(_) : ?TestHyphenatedEnumRequest |>
             (switch (_) {
@@ -243,7 +197,7 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let candidBlob = to_candid(testNumericEnumRequest); let requestOptions = { Candid.defaultOptions with renameKeys = allEncodeMappings }; let #ok(jsonText) = JSON.toText(candidBlob, [], ?requestOptions) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? { let jsonValue = TestNumericEnumRequest.toJSON(testNumericEnumRequest); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
         };
 
         // Call the management canister's http_request method with cycles
@@ -256,12 +210,9 @@ module {
                 case (?text) text;
                 case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
             }) |>
-            (do {
-                let responseOptions = { Candid.defaultOptions with renameKeys = allDecodeMappings };
-                switch (JSON.fromText(_, ?responseOptions)) {
-                    case (#ok(blob)) blob;
-                    case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
-                }
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
             from_candid(_) : ?TestNumericEnumRequest |>
             (switch (_) {
@@ -303,7 +254,7 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let candidBlob = to_candid(reservedWordModel); let requestOptions = { Candid.defaultOptions with renameKeys = allEncodeMappings }; let #ok(jsonText) = JSON.toText(candidBlob, [], ?requestOptions) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? { let jsonValue = ReservedWordModel.toJSON(reservedWordModel); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
         };
 
         // Call the management canister's http_request method with cycles
@@ -316,12 +267,9 @@ module {
                 case (?text) text;
                 case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
             }) |>
-            (do {
-                let responseOptions = { Candid.defaultOptions with renameKeys = allDecodeMappings };
-                switch (JSON.fromText(_, ?responseOptions)) {
-                    case (#ok(blob)) blob;
-                    case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
-                }
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
             from_candid(_) : ?ReservedWordModel |>
             (switch (_) {

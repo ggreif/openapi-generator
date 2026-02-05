@@ -90,9 +90,9 @@ persistent actor {
     };
     Debug.print("transformToEnumStatus received from httpbin: " # originalBody);
 
-    // Return JSON with enum in Candid variant format using Motoko-safe name
-    // renameKeys works on variant tags, so we use "published" (Motoko) not "published!" (OpenAPI)
-    let enumResponse = "{\"status\": {\"published\": null}}";
+    // Return JSON with enum in Candid variant format using the actual OpenAPI value
+    // Direct from_candid expects variant format with the JSON value as the key
+    let enumResponse = "{\"status\": {\"published!\": null}}";
 
     Debug.print("transformToEnumStatus returning JSON: " # enumResponse);
 
