@@ -101,10 +101,15 @@ module {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
-            from_candid(_) : ?HttpHeader |>
+            from_candid(_) : ?HttpHeader.JSON |>
             (switch (_) {
-                case (?value) value;
-                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to HttpHeader");
+                case (?jsonValue) {
+                    switch (HttpHeader.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to HttpHeader");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
             })
         } else {
             // Error response (4xx, 5xx): parse error models and throw
@@ -158,10 +163,15 @@ module {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
-            from_candid(_) : ?TestHyphenatedEnumRequest |>
+            from_candid(_) : ?TestHyphenatedEnumRequest.JSON |>
             (switch (_) {
-                case (?value) value;
-                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to TestHyphenatedEnumRequest");
+                case (?jsonValue) {
+                    switch (TestHyphenatedEnumRequest.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to TestHyphenatedEnumRequest");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
             })
         } else {
             // Error response (4xx, 5xx): parse error models and throw
@@ -215,10 +225,15 @@ module {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
-            from_candid(_) : ?TestNumericEnumRequest |>
+            from_candid(_) : ?TestNumericEnumRequest.JSON |>
             (switch (_) {
-                case (?value) value;
-                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to TestNumericEnumRequest");
+                case (?jsonValue) {
+                    switch (TestNumericEnumRequest.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to TestNumericEnumRequest");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
             })
         } else {
             // Error response (4xx, 5xx): parse error models and throw
@@ -272,10 +287,15 @@ module {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
-            from_candid(_) : ?ReservedWordModel |>
+            from_candid(_) : ?ReservedWordModel.JSON |>
             (switch (_) {
-                case (?value) value;
-                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to ReservedWordModel");
+                case (?jsonValue) {
+                    switch (ReservedWordModel.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to ReservedWordModel");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
             })
         } else {
             // Error response (4xx, 5xx): parse error models and throw
@@ -329,10 +349,15 @@ module {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
-            from_candid(_) : ?OuterRecord |>
+            from_candid(_) : ?OuterRecord.JSON |>
             (switch (_) {
-                case (?value) value;
-                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to OuterRecord");
+                case (?jsonValue) {
+                    switch (OuterRecord.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to OuterRecord");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
             })
         } else {
             // Error response (4xx, 5xx): parse error models and throw

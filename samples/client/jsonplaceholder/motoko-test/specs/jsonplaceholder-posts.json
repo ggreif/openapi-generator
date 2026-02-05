@@ -267,6 +267,40 @@
           }
         }
       }
+    },
+    "/anything/bulk-create": {
+      "post": {
+        "operationId": "createPostsBulk",
+        "summary": "Create multiple posts in bulk (tests array body parameter via httpbin /anything)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Post"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully created posts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

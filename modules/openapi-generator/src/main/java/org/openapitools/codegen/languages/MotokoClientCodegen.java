@@ -801,6 +801,25 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                     needsMapImport = true;
                 }
 
+                // Check body parameter for special handling
+                if (op.bodyParam != null) {
+                    org.openapitools.codegen.CodegenParameter bodyParam = op.bodyParam;
+
+                    // Handle array body parameters
+                    if (bodyParam.isArray && bodyParam.items != null) {
+                        bodyParam.vendorExtensions.put("x-body-is-array", true);
+                        bodyParam.vendorExtensions.put("x-body-base-type", bodyParam.items.dataType);
+
+                        // Check if array element type is primitive
+                        boolean isElementPrimitive = isPrimitiveOrMappedType(bodyParam.items.dataType);
+                        bodyParam.vendorExtensions.put("x-body-array-element-is-primitive", isElementPrimitive);
+                    } else if (bodyParam.dataType != null) {
+                        // Handle primitive body parameters
+                        boolean isPrimitive = isPrimitiveOrMappedType(bodyParam.dataType);
+                        bodyParam.vendorExtensions.put("x-body-is-primitive", isPrimitive);
+                    }
+                }
+
                 // Check if any parameters use Map
                 if (op.allParams != null) {
                     for (org.openapitools.codegen.CodegenParameter param : op.allParams) {

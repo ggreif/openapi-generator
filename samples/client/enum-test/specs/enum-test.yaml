@@ -197,3 +197,16 @@ components:
           type: integer
       required:
         - inner
+
+    FieldAndEnumMapping:
+      type: object
+      description: Test model with BOTH field name mapping AND enum value mapping
+      properties:
+        status-code:
+          $ref: '#/components/schemas/HTTPStatusEnum'
+        availability-status:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        content-type:
+          type: string
+      required:
+        - status-code

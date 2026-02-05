@@ -115,6 +115,11 @@ echo
 echo "13. Testing enum return type with special characters (via transform callback)..."
 dfx canister call api_test testEnumStatus
 
+# Test array body parameter (Motoko → JSON conversion)
+echo
+echo "14. Testing array body parameter (bulk create posts)..."
+dfx canister call api_test testBulkCreate
+
 echo
 echo "=== Tests Complete ==="
 echo

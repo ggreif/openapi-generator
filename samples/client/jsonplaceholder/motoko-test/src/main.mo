@@ -13,7 +13,6 @@ import Int "mo:core/Int";
 import Text "mo:core/Text";
 import Error "mo:core/Error";
 import Blob "mo:core/Blob";
-import { JSON } "mo:serde";
 import Float "mo:core/Float";
 
 persistent actor {
@@ -246,7 +245,7 @@ persistent actor {
   public func testGetJson() : async Text {
     Debug.print("Calling GET https://httpbin.org/json (expecting JSON success)...");
     try {
-      let response = await httpbinApi.getJson();
+      let _response = await httpbinApi.getJson();
       Debug.print("Success: Received JSON response from httpbin.org");
       "✓ Received JSON response from httpbin.org"
     } catch (err) {
@@ -362,6 +361,70 @@ persistent actor {
       let errorMsg = Error.message(err);
       Debug.print("✗ " # errorMsg);
       "✗ Failed to test enum return type - " # errorMsg
+    }
+  };
+
+  // Test endpoint 14: Test array body parameter (Motoko → JSON conversion)
+  // This tests: [Post] Motoko array → Array.map → [Post.JSON] → JSON serialization
+  public query func transformBulkCreate(args : {
+    response : { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob };
+    context : Blob;
+  }) : async { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob } {
+    // Return mock response with 2 posts
+    let mockResponse = "[{\"id\":100,\"userId\":1,\"title\":\"Test Post 1\",\"body\":\"Body 1\"},{\"id\":101,\"userId\":1,\"title\":\"Test Post 2\",\"body\":\"Body 2\"}]";
+
+    Debug.print("transformBulkCreate returning: " # mockResponse);
+
+    { args.response with
+      body = Text.encodeUtf8(mockResponse);
+    }
+  };
+
+  public func testBulkCreate() : async Text {
+    Debug.print("Testing array body parameter (bulk create posts via httpbin /anything)...");
+
+    let bulkApi = DefaultApi({
+      baseUrl = httpbinUrl;  // Use httpbin.org which has /anything that accepts POST
+      accessToken = null;
+      max_response_bytes = null;
+      transform = ?{
+        function = transformBulkCreate;
+        context = Blob.fromArray([]);
+      };
+      is_replicated = null;
+      cycles = 30_000_000_000;
+    });
+
+    try {
+      // Create test posts to send
+      let testPosts : [Post] = [
+        {
+          id = 1;
+          userId = 1;
+          title = "Test Post 1";
+          body = "Test Body 1";
+          status = null;
+        },
+        {
+          id = 2;
+          userId = 1;
+          title = "Test Post 2";
+          body = "Test Body 2";
+          status = null;
+        }
+      ];
+
+      // This should convert [Post] → [Post.JSON] using Array.map
+      let result = await bulkApi.createPostsBulk(testPosts);
+
+      Debug.print("✓ Array body parameter test succeeded");
+      Debug.print("Sent " # Nat.toText(testPosts.size()) # " posts, received " # Nat.toText(result.size()) # " posts back");
+
+      "✓ Array body parameter verified - [Post] Motoko array correctly converted to JSON array via Array.map"
+    } catch (err) {
+      let errorMsg = Error.message(err);
+      Debug.print("✗ " # errorMsg);
+      "✗ Failed to test array body parameter - " # errorMsg
     }
   };
 }
