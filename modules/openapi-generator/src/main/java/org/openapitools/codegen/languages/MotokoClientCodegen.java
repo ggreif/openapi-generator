@@ -48,6 +48,17 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         supportingFiles.add(new SupportingFile("mops.toml.mustache", "", "mops.toml"));
         supportingFiles.add(new SupportingFile("enumMappings.mustache", "", "EnumMappings.mo"));
 
+        // Motoko language-specific primitives (don't need imports)
+        // All builtin types are listed to prevent naming clashes with OpenAPI models
+        languageSpecificPrimitives.clear();
+        languageSpecificPrimitives.addAll(Arrays.asList(
+            "Text", "Char", "Bool",
+            "Int", "Int8", "Int16", "Int32", "Int64",
+            "Nat", "Nat8", "Nat16", "Nat32", "Nat64",
+            "Float", "Blob", "Any", "Null", "Principal",
+            "Region", "Error", "None"
+        ));
+
         // Motoko reserved words
         // Based on Motoko language specification
         reservedWords.addAll(Arrays.asList(
@@ -55,17 +66,12 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             "continue", "debug", "do", "else", "false", "for", "func", "if",
             "in", "import", "module", "not", "null", "object", "or", "label",
             "let", "loop", "private", "public", "query", "return", "shared", "switch",
-            "system", "throw", "true", "try", "type", "var", "while", "with",
-            // Core library types and primitives that could conflict with user-defined models
-            // NOTE: Must be lowercase as isReservedWord() converts to lowercase before checking
-            "text", "char", "bool", "int", "float", "blob", "any", "map"
+            "system", "throw", "true", "try", "type", "var", "while", "with"
         ));
-
-        // Motoko language-specific primitives (don't need imports)
-        languageSpecificPrimitives.clear();
-        languageSpecificPrimitives.addAll(Arrays.asList(
-            "Text", "Char", "Bool", "Int", "Float", "Blob", "Any"
-        ));
+        // Add lowercase versions of all primitives (isReservedWord() converts to lowercase)
+        languageSpecificPrimitives.forEach(p -> reservedWords.add(p.toLowerCase(Locale.ROOT)));
+        // Add "map" since Map<K,V> is a parameterized type that could conflict with user models
+        reservedWords.add("map");
 
         // Motoko type mappings
         typeMapping.clear();
@@ -575,19 +581,21 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
     /**
      * Check if a type is a primitive or mapped type (not a generated model).
+     * Uses languageSpecificPrimitives and typeMapping as the single source of truth.
      */
     private boolean isPrimitiveOrMappedType(String type) {
         if (type == null) {
             return false;
         }
+        // Check if it's a language-specific primitive
+        if (languageSpecificPrimitives.contains(type)) {
+            return true;
+        }
         // Check if it's in typeMapping (like Any for object)
         if (typeMapping.containsValue(type)) {
             return true;
         }
-        // Check if it's a primitive type
-        return type.equals("Text") || type.equals("Nat") || type.equals("Int") ||
-               type.equals("Bool") || type.equals("Float") || type.equals("Blob") ||
-               type.equals("Any") || type.equals("Null") || type.equals("Principal");
+        return false;
     }
 
     @Override
