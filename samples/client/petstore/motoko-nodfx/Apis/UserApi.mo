@@ -5,7 +5,7 @@ import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
-import { type User } "../Models/User";
+import { type User; JSON = User } "../Models/User";
 
 module {
     // Management Canister interface for HTTP outcalls
@@ -58,6 +58,7 @@ module {
         is_replicated : ?Bool;
         cycles : Nat;
     };
+
     /// Create user
     /// This can only be done by the logged in user.
     public func createUser(config : Config__, user : User) : async* () {
@@ -65,13 +66,13 @@ module {
         let url = baseUrl # "/user";
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -80,7 +81,12 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let candidBlob = to_candid(user); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = User.toJSON(user);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
@@ -95,13 +101,13 @@ module {
         let url = baseUrl # "/user/createWithArray";
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -110,7 +116,12 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let candidBlob = to_candid(user); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = Array.map<User, User.JSON>(user, User.toJSON);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
@@ -125,13 +136,13 @@ module {
         let url = baseUrl # "/user/createWithList";
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -140,7 +151,12 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let candidBlob = to_candid(user); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = Array.map<User, User.JSON>(user, User.toJSON);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
@@ -156,13 +172,13 @@ module {
             |> Text.replace(_, #text "{username}", username);
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -187,13 +203,13 @@ module {
             |> Text.replace(_, #text "{username}", username);
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -208,21 +224,46 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?User.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (User.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to User");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid username supplied (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid username supplied");
+            };
+            // 404: User not found (no response body model defined)
+            if (response.status == 404) {
+                throw Error.reject("HTTP 404: User not found");
+            };
 
-        let result : ?User = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to User");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -230,16 +271,17 @@ module {
     /// 
     public func loginUser(config : Config__, username : Text, password : Text) : async* Text {
         let {baseUrl; accessToken; cycles} = config;
-        let url = baseUrl # "/user/login";
+        let url = baseUrl # "/user/login"
+            # "?" # "username=" # username # "&" # "password=" # password;
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -254,21 +296,37 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Text |>
+            (switch (_) {
+                case (?result) result;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid username/password supplied (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid username/password supplied");
+            };
 
-        let result : ?Text = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to Text");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -279,13 +337,13 @@ module {
         let url = baseUrl # "/user/logout";
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -310,13 +368,13 @@ module {
             |> Text.replace(_, #text "{username}", username);
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -325,7 +383,12 @@ module {
             url;
             method = #put;
             headers;
-            body = do ? { let candidBlob = to_candid(user); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = User.toJSON(user);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles

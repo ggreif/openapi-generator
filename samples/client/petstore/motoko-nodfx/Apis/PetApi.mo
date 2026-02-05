@@ -5,8 +5,8 @@ import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
-import { type ApiResponse } "../Models/ApiResponse";
-import { type Pet } "../Models/Pet";
+import { type ApiResponse; JSON = ApiResponse } "../Models/ApiResponse";
+import { type Pet; JSON = Pet } "../Models/Pet";
 
 module {
     // Management Canister interface for HTTP outcalls
@@ -59,6 +59,7 @@ module {
         is_replicated : ?Bool;
         cycles : Nat;
     };
+
     /// Add a new pet to the store
     /// 
     public func addPet(config : Config__, pet : Pet) : async* Pet {
@@ -66,13 +67,13 @@ module {
         let url = baseUrl # "/pet";
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -81,27 +82,53 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let candidBlob = to_candid(pet); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = Pet.toJSON(pet);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Pet.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (Pet.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to Pet");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 405: Invalid input (no response body model defined)
+            if (response.status == 405) {
+                throw Error.reject("HTTP 405: Invalid input");
+            };
 
-        let result : ?Pet = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to Pet");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -113,14 +140,14 @@ module {
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" },
+            { name = "Content-Type"; value = "application/json; charset=utf-8" },
             { name = "api_key"; value = apiKey }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -141,16 +168,17 @@ module {
     /// Multiple status values can be provided with comma separated strings
     public func findPetsByStatus(config : Config__, status : [Text]) : async* [Pet] {
         let {baseUrl; accessToken; cycles} = config;
-        let url = baseUrl # "/pet/findByStatus";
+        let url = baseUrl # "/pet/findByStatus"
+            # "?" # "status=" # (switch (status) { case (#available) available; case (#pending) pending; case (#sold) sold; });
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -165,21 +193,43 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?[Pet.JSON] |>
+            (switch (_) {
+                case (?jsonArray) {
+                    let converted = Array.filterMap<Pet.JSON, Pet>(jsonArray, Pet.fromJSON);
+                    if (converted.size() != jsonArray.size()) {
+                        throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert some array elements to Pet");
+                    };
+                    converted
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid status value (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid status value");
+            };
 
-        let result : ?[Pet] = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to [Pet]");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -187,16 +237,17 @@ module {
     /// Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
     public func findPetsByTags(config : Config__, tags : [Text]) : async* [Pet] {
         let {baseUrl; accessToken; cycles} = config;
-        let url = baseUrl # "/pet/findByTags";
+        let url = baseUrl # "/pet/findByTags"
+            # "?" # "tags=" # debug_show(tags);
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -211,21 +262,43 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?[Pet.JSON] |>
+            (switch (_) {
+                case (?jsonArray) {
+                    let converted = Array.filterMap<Pet.JSON, Pet>(jsonArray, Pet.fromJSON);
+                    if (converted.size() != jsonArray.size()) {
+                        throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert some array elements to Pet");
+                    };
+                    converted
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid tag value (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid tag value");
+            };
 
-        let result : ?[Pet] = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to [Pet]");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -237,13 +310,13 @@ module {
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -258,21 +331,46 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Pet.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (Pet.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to Pet");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid ID supplied (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid ID supplied");
+            };
+            // 404: Pet not found (no response body model defined)
+            if (response.status == 404) {
+                throw Error.reject("HTTP 404: Pet not found");
+            };
 
-        let result : ?Pet = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to Pet");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -283,13 +381,13 @@ module {
         let url = baseUrl # "/pet";
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -298,27 +396,61 @@ module {
             url;
             method = #put;
             headers;
-            body = do ? { let candidBlob = to_candid(pet); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = Pet.toJSON(pet);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Pet.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (Pet.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to Pet");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
+            // 400: Invalid ID supplied (no response body model defined)
+            if (response.status == 400) {
+                throw Error.reject("HTTP 400: Invalid ID supplied");
+            };
+            // 404: Pet not found (no response body model defined)
+            if (response.status == 404) {
+                throw Error.reject("HTTP 404: Pet not found");
+            };
+            // 405: Validation exception (no response body model defined)
+            if (response.status == 405) {
+                throw Error.reject("HTTP 405: Validation exception");
+            };
 
-        let result : ?Pet = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to Pet");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 
@@ -330,13 +462,13 @@ module {
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -361,13 +493,13 @@ module {
             |> Text.replace(_, #text "{petId}", debug_show(petId));
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -382,21 +514,38 @@ module {
         // Call the management canister's http_request method with cycles
         let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
 
-        // Parse JSON response
-        let responseText = switch (Text.decodeUtf8(response.body)) {
-            case (?text) text;
-            case null throw Error.reject("Failed to decode response body as UTF-8");
-        };
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?ApiResponse.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (ApiResponse.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to ApiResponse");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
 
-        let jsonBlob = switch (JSON.fromText(responseText, null)) {
-            case (#ok(blob)) blob;
-            case (#err(msg)) throw Error.reject("Failed to parse JSON: " # msg);
-        };
 
-        let result : ?ApiResponse = from_candid(jsonBlob);
-        switch (result) {
-            case (?value) value;
-            case null throw Error.reject("Failed to deserialize response to ApiResponse");
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
         }
     };
 

@@ -5,7 +5,7 @@ import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
-import { type Order } "../Models/Order";
+import { type Order; JSON = Order } "../Models/Order";
 import { type Map } "mo:core/pure/Map";
 
 module {
@@ -68,13 +68,13 @@ module {
             |> Text.replace(_, #text "{orderId}", orderId);
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -98,13 +98,13 @@ module {
         let url = baseUrl # "/store/inventory";
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -130,10 +130,15 @@ module {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
-            from_candid(_) : ?Map<Text, Int> |>
+            from_candid(_) : ?Map<Text, Int>.JSON |>
             (switch (_) {
-                case (?value) value;
-                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to Map<Text, Int>");
+                case (?jsonValue) {
+                    switch (Map<Text, Int>.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to Map<Text, Int>");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
             })
         } else {
             // Error response (4xx, 5xx): parse error models and throw
@@ -157,13 +162,13 @@ module {
             |> Text.replace(_, #text "{orderId}", debug_show(orderId));
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -189,10 +194,15 @@ module {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
-            from_candid(_) : ?Order |>
+            from_candid(_) : ?Order.JSON |>
             (switch (_) {
-                case (?value) value;
-                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to Order");
+                case (?jsonValue) {
+                    switch (Order.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to Order");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
             })
         } else {
             // Error response (4xx, 5xx): parse error models and throw
@@ -223,13 +233,13 @@ module {
         let url = baseUrl # "/store/order";
 
         let baseHeaders = [
-            { name = "Content-Type"; value = "application/json" }
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
         ];
 
         // Add Authorization header if access token is provided
         let headers = switch (accessToken) {
             case (?token) {
-                Array.flatten([baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]]);
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
             };
             case null { baseHeaders };
         };
@@ -238,7 +248,12 @@ module {
             url;
             method = #post;
             headers;
-            body = do ? { let candidBlob = to_candid(order); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+            body = do ? {
+                let jsonValue = Order.toJSON(order);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
         };
 
         // Call the management canister's http_request method with cycles
@@ -255,10 +270,15 @@ module {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
-            from_candid(_) : ?Order |>
+            from_candid(_) : ?Order.JSON |>
             (switch (_) {
-                case (?value) value;
-                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to Order");
+                case (?jsonValue) {
+                    switch (Order.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to Order");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
             })
         } else {
             // Error response (4xx, 5xx): parse error models and throw
