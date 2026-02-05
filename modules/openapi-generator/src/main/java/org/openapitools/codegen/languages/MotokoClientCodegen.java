@@ -555,6 +555,23 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         return objs;
     }
 
+    /**
+     * Check if a type is a primitive or mapped type (not a generated model).
+     */
+    private boolean isPrimitiveOrMappedType(String type) {
+        if (type == null) {
+            return false;
+        }
+        // Check if it's in typeMapping (like Any for object)
+        if (typeMapping.containsValue(type)) {
+            return true;
+        }
+        // Check if it's a primitive type
+        return type.equals("Text") || type.equals("Nat") || type.equals("Int") ||
+               type.equals("Bool") || type.equals("Float") || type.equals("Blob") ||
+               type.equals("Any") || type.equals("Null") || type.equals("Principal");
+    }
+
     @Override
     public Map<String, ModelsMap> postProcessAllModels(Map<String, ModelsMap> objs) {
         // Call parent first
@@ -761,6 +778,22 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                     if (op.returnContainer != null && op.returnContainer.equals("array")) {
                         op.returnType = "[" + op.returnBaseType + "]";
                     }
+                }
+
+                // Mark operations with array return types for special handling in template
+                if (op.returnContainer != null && op.returnContainer.equals("array")) {
+                    op.vendorExtensions.put("x-return-is-array", true);
+                    op.vendorExtensions.put("x-return-base-type", op.returnBaseType);
+
+                    // Check if array element type is a primitive/mapped type
+                    boolean isElementPrimitive = isPrimitiveOrMappedType(op.returnBaseType);
+                    op.vendorExtensions.put("x-return-array-element-is-primitive", isElementPrimitive);
+                }
+
+                // Mark operations with primitive/mapped return types (non-model types)
+                if (op.returnType != null && op.returnContainer == null) {
+                    boolean isPrimitive = isPrimitiveOrMappedType(op.returnType);
+                    op.vendorExtensions.put("x-return-is-primitive", isPrimitive);
                 }
 
                 // Check if return type uses Map

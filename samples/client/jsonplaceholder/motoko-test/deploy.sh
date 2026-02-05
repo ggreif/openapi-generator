@@ -34,7 +34,10 @@ dfx start --clean --background
 
 echo
 echo "Deploying api_test canister..."
-dfx deploy api_test
+if ! dfx deploy api_test; then
+    echo "Error: dfx deploy failed"
+    exit 1
+fi
 
 echo
 echo "Adding cycles to canister for HTTP outcalls..."

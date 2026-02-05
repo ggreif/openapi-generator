@@ -120,11 +120,49 @@ module {
                 case (#ok(blob)) blob;
                 case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
             }) |>
+            {{#vendorExtensions.x-return-is-array}}
+            {{#vendorExtensions.x-return-array-element-is-primitive}}
+            from_candid(_) : ?[{{{vendorExtensions.x-return-base-type}}}] |>
+            (switch (_) {
+                case (?result) result;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+            {{/vendorExtensions.x-return-array-element-is-primitive}}
+            {{^vendorExtensions.x-return-array-element-is-primitive}}
+            from_candid(_) : ?[{{{vendorExtensions.x-return-base-type}}}.JSON] |>
+            (switch (_) {
+                case (?jsonArray) {
+                    let converted = Array.filterMap<{{{vendorExtensions.x-return-base-type}}}.JSON, {{{vendorExtensions.x-return-base-type}}}>(jsonArray, {{{vendorExtensions.x-return-base-type}}}.fromJSON);
+                    if (converted.size() != jsonArray.size()) {
+                        throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert some array elements to {{{vendorExtensions.x-return-base-type}}}");
+                    };
+                    converted
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+            {{/vendorExtensions.x-return-array-element-is-primitive}}
+            {{/vendorExtensions.x-return-is-array}}
+            {{^vendorExtensions.x-return-is-array}}
+            {{#vendorExtensions.x-return-is-primitive}}
             from_candid(_) : ?{{{returnType}}} |>
             (switch (_) {
-                case (?value) value;
-                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to {{{returnType}}}");
+                case (?result) result;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
             })
+            {{/vendorExtensions.x-return-is-primitive}}
+            {{^vendorExtensions.x-return-is-primitive}}
+            from_candid(_) : ?{{{returnType}}}.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch ({{{returnType}}}.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to {{{returnType}}}");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+            {{/vendorExtensions.x-return-is-primitive}}
+            {{/vendorExtensions.x-return-is-array}}
         } else {
             // Error response (4xx, 5xx): parse error models and throw
             let responseText = switch (Text.decodeUtf8(response.body)) {

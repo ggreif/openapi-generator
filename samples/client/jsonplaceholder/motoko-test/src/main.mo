@@ -13,6 +13,7 @@ import Int "mo:core/Int";
 import Text "mo:core/Text";
 import Error "mo:core/Error";
 import Blob "mo:core/Blob";
+import { JSON } "mo:serde";
 import Float "mo:core/Float";
 
 persistent actor {
@@ -90,9 +91,9 @@ persistent actor {
     };
     Debug.print("transformToEnumStatus received from httpbin: " # originalBody);
 
-    // Return JSON with enum in Candid variant format using the actual OpenAPI value
-    // Direct from_candid expects variant format with the JSON value as the key
-    let enumResponse = "{\"status\": {\"published!\": null}}";
+    // Return JSON with enum value as actual JSON (not Candid variant format)
+    // The API template now uses Janus Types conversion which expects JSON format
+    let enumResponse = "{\"status\": \"published!\"}";
 
     Debug.print("transformToEnumStatus returning JSON: " # enumResponse);
 
@@ -322,7 +323,7 @@ persistent actor {
   };
 
   // Test endpoint 13: Test enum return type with special characters (via transform callback)
-  // This tests the full flow: HTTP outcall → transform → JSON enum deserialization with renameKeys
+  // This tests the full flow: HTTP outcall → transform → JSON enum deserialization
   // Verifies that "published!" (JSON) correctly maps to #published (Motoko variant)
   public func testEnumStatus() : async Text {
     Debug.print("Testing enum return type with special characters via transform callback...");
@@ -341,7 +342,7 @@ persistent actor {
     });
 
     try {
-      // Call httpbin.org /anything/enum-status, but transform returns {"status": {"published!": null}}
+      // Call httpbin.org /anything/enum-status, but transform returns {"status": "published!"}
       let response = await enumApi.getEnumStatus();
 
       // Verify deserialization and enum mapping worked correctly
