@@ -6,6 +6,7 @@ import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
 import { type HttpHeader; JSON = HttpHeader } "../Models/HttpHeader";
+import { type OuterRecord; JSON = OuterRecord } "../Models/OuterRecord";
 import { type ReservedWordModel; JSON = ReservedWordModel } "../Models/ReservedWordModel";
 import { type TestHyphenatedEnumRequest; JSON = TestHyphenatedEnumRequest } "../Models/TestHyphenatedEnumRequest";
 import { type TestNumericEnumRequest; JSON = TestNumericEnumRequest } "../Models/TestNumericEnumRequest";
@@ -290,12 +291,70 @@ module {
         }
     };
 
+    /// Test transitive enum references (Record containing Record containing Enum)
+    public func testTransitiveEnum(config : Config__, outerRecord : OuterRecord) : async* OuterRecord {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/test-transitive-enum";
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #post;
+            headers;
+            body = do ? { let jsonValue = OuterRecord.toJSON(outerRecord); let candidBlob = to_candid(jsonValue); let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON"); Text.encodeUtf8(jsonText) };
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?OuterRecord |>
+            (switch (_) {
+                case (?value) value;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response to OuterRecord");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
 
     let operations__ = {
         testEscapedFields;
         testHyphenatedEnum;
         testNumericEnum;
         testReservedWords;
+        testTransitiveEnum;
     };
 
     public module class DefaultApi(config : Config__) {
@@ -317,6 +376,11 @@ module {
         /// Test reserved word field names
         public func testReservedWords(reservedWordModel : ReservedWordModel) : async ReservedWordModel {
             await* operations__.testReservedWords(config, reservedWordModel)
+        };
+
+        /// Test transitive enum references (Record containing Record containing Enum)
+        public func testTransitiveEnum(outerRecord : OuterRecord) : async OuterRecord {
+            await* operations__.testTransitiveEnum(config, outerRecord)
         };
 
     }

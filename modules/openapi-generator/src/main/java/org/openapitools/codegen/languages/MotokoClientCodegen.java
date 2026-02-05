@@ -498,10 +498,6 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                     if (hasEnumFields) {
                         model.vendorExtensions.put("x-needs-json-module", true);
                         model.vendorExtensions.put("xNeedsJsonModule", true);
-                    } else {
-                        // Model has no enum fields - can use record update syntax for identity transform
-                        model.vendorExtensions.put("x-no-enum-fields", true);
-                        model.vendorExtensions.put("xNoEnumFields", true);
                     }
                 }
             }
@@ -554,6 +550,96 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                 "isMap", "true",
                 "isMappedType", "true"  // Prevent it from being imported as a model
             ));
+        }
+
+        return objs;
+    }
+
+    @Override
+    public Map<String, ModelsMap> postProcessAllModels(Map<String, ModelsMap> objs) {
+        // Call parent first
+        objs = super.postProcessAllModels(objs);
+
+        // Collect all models from all ModelsMap objects
+        List<CodegenModel> allModels = new ArrayList<>();
+        for (ModelsMap modelsMap : objs.values()) {
+            List<ModelMap> modelMaps = modelsMap.getModels();
+            if (modelMaps != null) {
+                for (ModelMap modelMap : modelMaps) {
+                    CodegenModel model = modelMap.getModel();
+                    if (model != null) {
+                        allModels.add(model);
+                    }
+                }
+            }
+        }
+
+        // THIRD PASS: Detect transitive enum references (models containing fields that reference models with enums)
+        // Iterate until we reach a fixed point (no new models marked as having enum fields)
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (CodegenModel model : allModels) {
+                // Skip if already marked as having enum fields or if it's an enum itself
+                if (!Boolean.TRUE.equals(model.vendorExtensions.get("xNeedsJsonModule"))
+                    && !Boolean.TRUE.equals(model.isEnum)) {
+
+                    boolean hasTransitiveEnums = false;
+
+                    if (model.vars != null) {
+                        for (CodegenProperty prop : model.vars) {
+                            // Check if this field's type is a model that has enum fields
+                            if (prop.dataType != null && !prop.isEnum && !prop.isEnumRef) {
+                                // Look for the referenced model
+                                for (CodegenModel refModel : allModels) {
+                                    if (refModel.classname.equals(prop.dataType)
+                                        && Boolean.TRUE.equals(refModel.vendorExtensions.get("xNeedsJsonModule"))) {
+                                        hasTransitiveEnums = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (hasTransitiveEnums) break;
+                        }
+                    }
+
+                    if (hasTransitiveEnums) {
+                        model.vendorExtensions.put("x-needs-json-module", true);
+                        model.vendorExtensions.put("xNeedsJsonModule", true);
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        // FOURTH PASS: Mark models that have no enum fields (neither direct nor transitive) for identity optimization
+        for (CodegenModel model : allModels) {
+            if (!Boolean.TRUE.equals(model.isEnum)
+                && !Boolean.TRUE.equals(model.vendorExtensions.get("xNeedsJsonModule"))) {
+                // Model has no enum fields - can use identity transform
+                model.vendorExtensions.put("x-no-enum-fields", true);
+                model.vendorExtensions.put("xNoEnumFields", true);
+            }
+        }
+
+        // FIFTH PASS: Mark properties that reference models needing JSON conversion
+        for (CodegenModel model : allModels) {
+            if (model.vars != null) {
+                for (CodegenProperty prop : model.vars) {
+                    // Check if this property references a model that needs JSON conversion
+                    if (prop.dataType != null && !prop.isEnum && !prop.isEnumRef) {
+                        for (CodegenModel refModel : allModels) {
+                            if (refModel.classname.equals(prop.dataType)
+                                && Boolean.TRUE.equals(refModel.vendorExtensions.get("xNeedsJsonModule"))) {
+                                // This property references a model that needs JSON conversion
+                                prop.vendorExtensions.put("x-needs-json-conversion", true);
+                                prop.vendorExtensions.put("xNeedsJsonConversion", true);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         return objs;

@@ -4,6 +4,8 @@ Models/AvailabilityEnum.mo
 Models/HTTPStatusEnum.mo
 Models/HttpHeader.mo
 Models/HyphenatedColorEnum.mo
+Models/InnerRecordWithEnum.mo
+Models/OuterRecord.mo
 Models/ReservedWordModel.mo
 Models/SimpleColorEnum.mo
 Models/TestHyphenatedEnumRequest.mo

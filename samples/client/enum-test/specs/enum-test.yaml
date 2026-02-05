@@ -97,6 +97,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReservedWordModel'
 
+  /test-transitive-enum:
+    post:
+      operationId: testTransitiveEnum
+      summary: Test transitive enum references (Record containing Record containing Enum)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OuterRecord'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OuterRecord'
+
 components:
   schemas:
     SimpleColorEnum:
@@ -157,3 +175,25 @@ components:
           type: integer
       required:
         - try
+
+    InnerRecordWithEnum:
+      type: object
+      description: Inner record containing an enum field
+      properties:
+        status:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        message:
+          type: string
+      required:
+        - status
+
+    OuterRecord:
+      type: object
+      description: Outer record containing inner record with enum (transitive)
+      properties:
+        inner:
+          $ref: '#/components/schemas/InnerRecordWithEnum'
+        id:
+          type: integer
+      required:
+        - inner
