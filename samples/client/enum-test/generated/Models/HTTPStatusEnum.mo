@@ -28,8 +28,7 @@ module {
 
         // Convert JSON-facing Motoko type to Motoko-facing type
         public func fromJSON(json : JSON) : ?HTTPStatusEnum {
-            if (json < 0) return null;
-            switch (Int.abs(json)) {
+            switch (json) {
                 case 200 ?#_200_;
                 case 404 ?#_404_;
                 case 500 ?#_500_;

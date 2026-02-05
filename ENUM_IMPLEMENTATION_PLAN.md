@@ -251,7 +251,7 @@ With parallel type hierarchies, `renameKeys` is simplified to **only handle fiel
    // OpenAPI: enum: [200, 404, 500]
    public type HTTPStatus = { #_200_; #_404_; #_500_ };
    public module JSON {
-       public type JSON = Nat;  // JSON-facing: actual numbers
+       public type JSON = Int;  // JSON-facing: actual numbers (use Int for OpenAPI integer type)
        public func toJSON(status : HTTPStatus) : JSON {
            switch (status) {
                case (#_200_) 200;
@@ -259,8 +259,10 @@ With parallel type hierarchies, `renameKeys` is simplified to **only handle fiel
                case (#_500_) 500;
            }
        };
-       public func fromJSON(n : JSON) : ?HTTPStatus {
-           switch (n) {
+       public func fromJSON(json : JSON) : ?HTTPStatus {
+           // Since Nat is a subtype of Int, we can directly match Int values against Nat patterns
+           // Negative values naturally fall through to the default case
+           switch (json) {
                case 200 ?#_200_;
                case 404 ?#_404_;
                case 500 ?#_500_;
@@ -382,7 +384,7 @@ public module JSON {
 
 The **Janus Types** approach elegantly solves the OpenAPI enum challenge:
 
-- **Two-faced types:** Each model has both Motoko-facing (variants) and JSON-facing (Text/Nat) representations
+- **Two-faced types:** Each model has both Motoko-facing (variants) and JSON-facing (Text/Int) representations
 - **Explicit conversions:** Generated `toJSON/fromJSON` functions provide type-safe bridging
 - **No magic:** All conversions are visible and type-checked at generation time
 - **Works today:** Uses existing moc compiler and serde library
@@ -440,7 +442,7 @@ See git notes on commit `abb7b6e00d6` for detailed debugging information and tes
 1. JSON strings → Candid Text (not variants)
 2. Deeply nested JSON arrays → incorrect Candid array nesting
 
-**Solution:** The Janus Types approach sidesteps this issue by using JSON-facing Motoko types (Text, Nat) that naturally match the JSON structure, then explicitly converting to variant types in application code.
+**Solution:** The Janus Types approach sidesteps this issue by using JSON-facing Motoko types (Text, Int) that naturally match the JSON structure, then explicitly converting to variant types in application code.
 
 ## Related Work and Test Files
 

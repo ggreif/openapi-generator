@@ -53,8 +53,7 @@ module {
             switch (json) {
 {{/isString}}
 {{^isString}}
-            if (json < 0) return null;
-            switch (Int.abs(json)) {
+            switch (json) {
 {{/isString}}
 {{/-first}}
                 case {{#isString}}"{{value}}"{{/isString}}{{^isString}}{{value}}{{/isString}} ?#{{name}};
