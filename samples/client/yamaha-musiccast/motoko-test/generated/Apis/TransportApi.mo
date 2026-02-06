@@ -8,13 +8,13 @@ import { JSON } "mo:serde";
 // FIXME: destructuring on `actor` types is not implemented yet
 //        type error [M0114], object pattern cannot consume actor type
 //import { type http_request_args; type http_request_result; type http_header; http_request } "ic:aaaaa-aa";
-import Mgnt = "ic:aaaaa-aa";
+import Mgnt__ = "ic:aaaaa-aa";
 import { type SetPlaybackPlaybackParameter; JSON = SetPlaybackPlaybackParameter } "../Models/SetPlaybackPlaybackParameter";
 
 module {
-    type http_request_args = Mgnt.http_request_args;
-    type http_request_result = Mgnt.http_request_result;
-    type http_header = Mgnt.http_header;
+    type http_request_args = Mgnt__.http_request_args;
+    type http_request_result = Mgnt__.http_request_result;
+    type http_header = Mgnt__.http_header;
     type http_method = {
         #get;
         #head;
@@ -26,7 +26,7 @@ module {
         // #delete;
     };
 
-    let http_request = Mgnt.http_request;
+    let http_request = Mgnt__.http_request;
 
     type Config__ = {
         baseUrl : Text;
