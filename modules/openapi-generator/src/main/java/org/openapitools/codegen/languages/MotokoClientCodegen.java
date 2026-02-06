@@ -337,6 +337,27 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             }
         }
 
+        // Check if this is an integer parameter with minimum >= 0 constraint
+        // Convert to Nat type for type safety (unsigned integers)
+        if (parameter.dataType != null) {
+            String dataType = parameter.dataType;
+            boolean isIntType = "Int".equals(dataType) || dataType.matches("Int\\d+");
+
+            if (isIntType && parameter.minimum != null) {
+                try {
+                    java.math.BigDecimal minimum = new java.math.BigDecimal(parameter.minimum);
+                    if (minimum.compareTo(java.math.BigDecimal.ZERO) >= 0) {
+                        // Convert Int to Nat (unsigned)
+                        parameter.dataType = "Nat";
+                        parameter.vendorExtensions.put("x-is-unsigned", true);
+                        parameter.vendorExtensions.put("x-original-type", dataType);
+                    }
+                } catch (NumberFormatException e) {
+                    // Ignore invalid minimum values
+                }
+            }
+        }
+
         // For enum parameters, ensure enumVars are built for template use
         if (Boolean.TRUE.equals(parameter.isEnum) && parameter.allowableValues != null) {
             @SuppressWarnings("unchecked")
@@ -400,7 +421,149 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             }
         }
 
+        // Handle oneOf schemas - generate as discriminated unions (variant types)
+        if (model.getComposedSchemas() != null && model.getComposedSchemas().getOneOf() != null) {
+            List<CodegenProperty> oneOfList = model.getComposedSchemas().getOneOf();
+
+            if (!oneOfList.isEmpty()) {
+                model.vendorExtensions.put("x-is-oneof", true);
+
+                // Build variant cases for oneOf options
+                List<Map<String, Object>> oneOfVariants = new ArrayList<>();
+                boolean hasUnsignedVariants = false;
+
+                for (int i = 0; i < oneOfList.size(); i++) {
+                    CodegenProperty oneOfProp = oneOfList.get(i);
+
+                    // Check if this is an inline enum - expand it into multiple unit variants
+                    if (Boolean.TRUE.equals(oneOfProp.isEnum) && oneOfProp.allowableValues != null) {
+                        @SuppressWarnings("unchecked")
+                        List<Object> enumValues = (List<Object>) oneOfProp.allowableValues.get("values");
+
+                        if (enumValues != null && !enumValues.isEmpty()) {
+                            // Expand inline enum into multiple unit variants
+                            for (Object enumValue : enumValues) {
+                                Map<String, Object> variant = new HashMap<>();
+                                String variantName = toEnumVarName(String.valueOf(enumValue), oneOfProp.dataType);
+
+                                variant.put("name", variantName);
+                                variant.put("hasType", false);  // Unit variant (no associated data)
+                                variant.put("isUnsigned", false);
+                                variant.put("needsConversion", false);
+                                variant.put("enumValue", String.valueOf(enumValue));
+                                variant.put("isStringEnum", enumValue instanceof String);
+
+                                oneOfVariants.add(variant);
+                            }
+                            continue;  // Skip regular processing for this enum option
+                        }
+                    }
+
+                    // Regular oneOf option (not an inline enum)
+                    Map<String, Object> variant = new HashMap<>();
+
+                    // Determine variant name and type
+                    String variantName = getOneOfVariantName(oneOfProp);
+                    String variantType = oneOfProp.dataType;
+                    String jsonType = variantType;  // JSON-facing type (may differ for Nat->Int)
+
+                    // For integer types with minimum >= 0, convert to Nat in Motoko-facing type
+                    boolean isUnsigned = Boolean.TRUE.equals(oneOfProp.vendorExtensions.get("x-is-unsigned"));
+                    if (isUnsigned || ("Nat".equals(variantType))) {
+                        // Motoko-facing uses Nat, JSON-facing uses Int
+                        variantType = "Nat";
+                        jsonType = "Int";
+                        isUnsigned = true;
+                        hasUnsignedVariants = true;
+                    }
+
+                    variant.put("name", variantName);
+                    variant.put("dataType", variantType);
+                    variant.put("jsonType", jsonType);
+                    variant.put("hasType", true);  // Typed variant (has associated data)
+                    variant.put("isUnsigned", isUnsigned);
+                    variant.put("needsConversion", !variantType.equals(jsonType));
+
+                    oneOfVariants.add(variant);
+                }
+
+                // Mark the last variant
+                if (!oneOfVariants.isEmpty()) {
+                    oneOfVariants.get(oneOfVariants.size() - 1).put("-last", true);
+                }
+
+                model.vendorExtensions.put("oneOfVariants", oneOfVariants);
+
+                // Set flag if any variant needs Int import for unsigned conversion
+                if (hasUnsignedVariants) {
+                    model.vendorExtensions.put("x-has-unsigned-fields", true);
+                }
+            }
+        }
+
         return model;
+    }
+
+    /**
+     * Generate a variant name for a oneOf option.
+     * For simple types, use the type name. For enum strings, use the enum value.
+     */
+    private String getOneOfVariantName(CodegenProperty prop) {
+        // For enum types, use the first enum value or a sanitized name
+        if (Boolean.TRUE.equals(prop.isEnum) && prop.allowableValues != null) {
+            @SuppressWarnings("unchecked")
+            List<Object> values = (List<Object>) prop.allowableValues.get("values");
+            if (values != null && !values.isEmpty()) {
+                // Use the enum values directly as variant names
+                // This handles string enums like ["up", "down"]
+                return toEnumVarName(String.valueOf(values.get(0)), prop.dataType);
+            }
+        }
+
+        // For reference types, use the referenced type name
+        if (prop.complexType != null) {
+            return toVarName(prop.complexType);
+        }
+
+        // For primitive types, use the base type name
+        String baseName = prop.baseName != null ? prop.baseName : prop.dataType;
+        if (baseName != null) {
+            return toVarName(baseName);
+        }
+
+        // Default to "integer", "string", etc. for simple types
+        return toVarName(prop.dataType);
+    }
+
+    @Override
+    public CodegenProperty fromProperty(String name, Schema propertySchema, boolean required, boolean schemaIsFromAdditionalProperties) {
+        CodegenProperty property = super.fromProperty(name, propertySchema, required, schemaIsFromAdditionalProperties);
+
+        // Check if this is an integer type with minimum >= 0 constraint
+        // Convert to Nat type for type safety (unsigned integers)
+        if (property != null && property.dataType != null) {
+            String dataType = property.dataType;
+
+            // Check if it's an Int type (including parameterized types in arrays/maps)
+            boolean isIntType = "Int".equals(dataType) || dataType.matches("Int\\d+");
+
+            if (isIntType && propertySchema != null) {
+                // Check minimum constraint
+                java.math.BigDecimal minimum = propertySchema.getMinimum();
+
+                if (minimum != null && minimum.compareTo(java.math.BigDecimal.ZERO) >= 0) {
+                    // Convert Int to Nat (unsigned)
+                    // Note: This creates Janus-like behavior where JSON has Int but Motoko uses Nat
+                    property.dataType = "Nat";
+
+                    // Add vendor extension to signal this conversion in templates
+                    property.vendorExtensions.put("x-is-unsigned", true);
+                    property.vendorExtensions.put("x-original-type", dataType);
+                }
+            }
+        }
+
+        return property;
     }
 
     @Override
@@ -460,6 +623,8 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
                     // Track if this model has any enum fields (needs JSON sub-module)
                     boolean hasEnumFields = false;
+                    // Track if this model has any unsigned (Nat) fields
+                    boolean hasUnsignedFields = false;
 
                     if (model.vars != null) {
                         // Collect field name mappings
@@ -469,6 +634,11 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                             // Check for Map usage
                             if (prop.dataType != null && prop.dataType.contains("Map<")) {
                                 needsMapImport = true;
+                            }
+
+                            // Check for unsigned fields (Nat types converted from Int)
+                            if (Boolean.TRUE.equals(prop.vendorExtensions.get("x-is-unsigned"))) {
+                                hasUnsignedFields = true;
                             }
 
                             // Collect escaped field names (where Motoko name differs from JSON name)
@@ -522,6 +692,11 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                     if (hasEnumFields) {
                         model.vendorExtensions.put("x-needs-json-module", true);
                         model.vendorExtensions.put("xNeedsJsonModule", true);
+                    }
+
+                    // Mark models that have unsigned (Nat) fields (need Int import for conversion)
+                    if (hasUnsignedFields) {
+                        model.vendorExtensions.put("x-has-unsigned-fields", true);
                     }
                 }
             }
@@ -655,11 +830,12 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             }
         }
 
-        // FOURTH PASS: Mark models that have no enum fields (neither direct nor transitive) for identity optimization
+        // FOURTH PASS: Mark models that have no enum fields (neither direct nor transitive) and no unsigned fields for identity optimization
         for (CodegenModel model : allModels) {
             if (!Boolean.TRUE.equals(model.isEnum)
-                && !Boolean.TRUE.equals(model.vendorExtensions.get("xNeedsJsonModule"))) {
-                // Model has no enum fields - can use identity transform
+                && !Boolean.TRUE.equals(model.vendorExtensions.get("xNeedsJsonModule"))
+                && !Boolean.TRUE.equals(model.vendorExtensions.get("x-has-unsigned-fields"))) {
+                // Model has no enum fields and no unsigned fields - can use identity transform
                 model.vendorExtensions.put("x-no-enum-fields", true);
                 model.vendorExtensions.put("xNoEnumFields", true);
             }

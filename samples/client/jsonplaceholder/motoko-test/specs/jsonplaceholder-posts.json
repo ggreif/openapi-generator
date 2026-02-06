@@ -301,6 +301,77 @@
           }
         }
       }
+    },
+    "/posts/paginated": {
+      "get": {
+        "operationId": "getPostsPaginated",
+        "summary": "Get posts with pagination (tests Nat query parameters)",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Page number (non-negative, should be Nat)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Items per page (positive integer, should be Nat)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with pagination metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPostsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/stats": {
+      "post": {
+        "operationId": "updatePostStats",
+        "summary": "Update post statistics (tests Nat fields in request body)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostStats"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostStats"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -394,6 +465,71 @@
               "minItems": 4
             },
             "minItems": 1
+          }
+        }
+      },
+      "PaginatedPostsResponse": {
+        "type": "object",
+        "required": [
+          "posts",
+          "page",
+          "total"
+        ],
+        "properties": {
+          "posts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Post"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Current page number (should be Nat)"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of posts (should be Nat)"
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page (should be Nat)"
+          }
+        }
+      },
+      "PostStats": {
+        "type": "object",
+        "required": [
+          "postId",
+          "views",
+          "likes"
+        ],
+        "properties": {
+          "postId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Post ID (should be Nat)"
+          },
+          "views": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of views (should be Nat)"
+          },
+          "likes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of likes (should be Nat)"
+          },
+          "shares": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of shares (should be Nat)"
+          },
+          "lastUpdated": {
+            "type": "integer",
+            "description": "Unix timestamp (can be negative for testing, should remain Int)"
           }
         }
       }

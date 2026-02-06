@@ -115,6 +115,34 @@ paths:
               schema:
                 $ref: '#/components/schemas/OuterRecord'
 
+  /test-oneof-variant:
+    post:
+      operationId: testOneOfVariant
+      summary: Test oneOf discriminated union (similar to Yamaha volume parameter)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                volume:
+                  $ref: '#/components/schemas/VolumeParameter'
+              required:
+                - volume
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  volume:
+                    $ref: '#/components/schemas/VolumeParameter'
+                required:
+                  - volume
+
 components:
   schemas:
     SimpleColorEnum:
@@ -210,3 +238,28 @@ components:
           type: string
       required:
         - status-code
+
+    VolumeParameter:
+      description: Volume control parameter - discriminated union of integer value or direction
+      oneOf:
+        - type: integer
+          minimum: 0
+          description: Direct volume level (0-100)
+        - type: string
+          enum:
+            - up
+            - down
+          description: Volume adjustment direction
+
+    MixedOneOf:
+      description: Complex oneOf with enum, integer, and object types
+      oneOf:
+        - type: integer
+          minimum: 0
+        - $ref: '#/components/schemas/SimpleColorEnum'
+        - type: object
+          properties:
+            custom:
+              type: string
+          required:
+            - custom

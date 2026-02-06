@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "defaults": {
+    "build": {
+      "packtool": "npx ic-mops sources"
+    }
+  },
+  "canisters": {
+    "yamaha_test": {
+      "type": "motoko",
+      "main": "src/main.mo"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    }
+  }
+}
