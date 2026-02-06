@@ -1,7 +1,6 @@
 Apis/PetApi.mo
 Apis/StoreApi.mo
 Apis/UserApi.mo
-EnumMappings.mo
 Models/ApiResponse.mo
 Models/Category.mo
 Models/FindPetsByStatusStatusParameterInner.mo

@@ -46,7 +46,6 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         modelPackage = "Models";
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
         supportingFiles.add(new SupportingFile("mops.toml.mustache", "", "mops.toml"));
-        supportingFiles.add(new SupportingFile("enumMappings.mustache", "", "EnumMappings.mo"));
 
         // Motoko language-specific primitives (don't need imports)
         // All builtin types are listed to prevent naming clashes with OpenAPI models
@@ -620,8 +619,7 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
         // Check if we need to import Map
         boolean needsMapImport = false;
 
-        // Collect enum and field mappings for JSON serialization
-        Map<String, List<Map<String, String>>> enumMappings = new HashMap<>();
+        // Collect field mappings for JSON serialization
         Map<String, List<Map<String, String>>> fieldMappings = new HashMap<>();
 
         // Check all model properties for Map usage and enum references
@@ -646,14 +644,6 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                     // Mark enum models for conditional template logic
                     if (Boolean.TRUE.equals(model.isEnum)) {
                         model.vendorExtensions.put("x-is-motoko-enum", true);
-
-                        // Collect enum variant mappings
-                        List<Map<String, String>> mappings = collectEnumMappings(model);
-                        if (!mappings.isEmpty()) {
-                            enumMappings.put(model.classname, mappings);
-                            model.vendorExtensions.put("x-has-enum-mappings", true);
-                            model.vendorExtensions.put("x-enum-mappings", mappings);
-                        }
                     }
 
                     // Track if this model has any enum fields (needs JSON sub-module)
@@ -737,10 +727,9 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
             }
         }
 
-        // Store mappings in context for templates
-        objs.put("enumMappings", enumMappings);
+        // Store field mappings in context for templates
         objs.put("fieldMappings", fieldMappings);
-        objs.put("hasAnyMappings", !enumMappings.isEmpty() || !fieldMappings.isEmpty());
+        objs.put("hasAnyMappings", !fieldMappings.isEmpty());
 
         // Mark imports that are mapped types (primitives) or array/map types so they can be filtered out
         List<Map<String, String>> imports = objs.getImports();
@@ -941,34 +930,6 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
      * Collect enum variant mappings for JSON serialization.
      * Returns a list of mappings where Motoko variant name differs from OpenAPI value.
      */
-    private List<Map<String, String>> collectEnumMappings(CodegenModel model) {
-        List<Map<String, String>> mappings = new ArrayList<>();
-
-        if (model.allowableValues != null) {
-            Object enumVarsObj = model.allowableValues.get("enumVars");
-            if (enumVarsObj instanceof List<?>) {
-                List<?> enumVars = (List<?>) enumVarsObj;
-                for (Object enumVarObj : enumVars) {
-                    if (enumVarObj instanceof Map<?, ?>) {
-                        Map<?, ?> enumVar = (Map<?, ?>) enumVarObj;
-                        String motokoName = (String) enumVar.get("name");
-                        String jsonValue = (String) enumVar.get("value");
-
-                        // Only add mapping if names differ
-                        if (motokoName != null && jsonValue != null && !motokoName.equals(jsonValue)) {
-                            Map<String, String> mapping = new HashMap<>();
-                            mapping.put("motokoName", motokoName);
-                            mapping.put("jsonValue", jsonValue);
-                            mappings.add(mapping);
-                        }
-                    }
-                }
-            }
-        }
-
-        return mappings;
-    }
-
     @Override
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);

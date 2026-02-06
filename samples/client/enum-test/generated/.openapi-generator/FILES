@@ -1,5 +1,4 @@
 Apis/DefaultApi.mo
-EnumMappings.mo
 Models/AvailabilityEnum.mo
 Models/FieldAndEnumMapping.mo
 Models/HTTPStatusEnum.mo
