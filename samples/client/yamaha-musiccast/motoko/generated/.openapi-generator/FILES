@@ -1,9 +1,0 @@
-Apis/NetusbApi.mo
-Apis/PowerApi.mo
-Apis/SystemApi.mo
-Apis/TransportApi.mo
-Apis/TunerApi.mo
-Apis/ZoneApi.mo
-Models/SetVolumeVolumeParameter.mo
-README.md
-mops.toml

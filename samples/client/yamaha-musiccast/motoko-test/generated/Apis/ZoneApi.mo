@@ -5,22 +5,19 @@ import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
-//import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
-import { type SetInputInputParameter; JSON = SetInputInputParameter } "../Models/SetInputInputParameter";
-import { type SetInputModeParameter; JSON = SetInputModeParameter } "../Models/SetInputModeParameter";
-import { type SetVolumeVolumeParameter; JSON = SetVolumeVolumeParameter } "../Models/SetVolumeVolumeParameter";
-//import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 // FIXME: destructuring on `actor` types is not implemented yet
 //        type error [M0114], object pattern cannot consume actor type
 //import { type http_request_args; type http_request_result; type http_header; http_request } "ic:aaaaa-aa";
 import Mgnt = "ic:aaaaa-aa";
+import { type SetInputInputParameter; JSON = SetInputInputParameter } "../Models/SetInputInputParameter";
+import { type SetInputModeParameter; JSON = SetInputModeParameter } "../Models/SetInputModeParameter";
+import { type SetVolumeVolumeParameter; JSON = SetVolumeVolumeParameter } "../Models/SetVolumeVolumeParameter";
 
 module {
-
-    type CanisterHttpRequestArgument = Mgnt.http_request_args;
-    type CanisterHttpResponsePayload = Mgnt.http_request_result;
-    type HttpHeader = Mgnt.http_header;
-    type HttpMethod = {
+    type http_request_args = Mgnt.http_request_args;
+    type http_request_result = Mgnt.http_request_result;
+    type http_header = Mgnt.http_header;
+    type http_method = {
         #get;
         #head;
         #post;
@@ -31,12 +28,14 @@ module {
         // #delete;
     };
 
+    let http_request = Mgnt.http_request;
+
     type Config__ = {
         baseUrl : Text;
         accessToken : ?Text;
         max_response_bytes : ?Nat64;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
@@ -62,7 +61,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -70,7 +69,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) Mgnt.http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -121,7 +120,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -129,7 +128,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) Mgnt.http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -181,7 +180,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -189,7 +188,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) Mgnt.http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -241,7 +240,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -249,7 +248,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) Mgnt.http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -301,7 +300,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -309,7 +308,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) Mgnt.http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -361,7 +360,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -369,7 +368,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) Mgnt.http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -421,7 +420,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -429,7 +428,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) Mgnt.http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -481,7 +480,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -489,7 +488,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) Mgnt.http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {

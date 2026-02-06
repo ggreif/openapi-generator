@@ -20,6 +20,7 @@ module {
                 case (#one_of_0(v)) Int.toText(v);
                 case (#SetVolumeVolumeParameterOneOf(v)) SetVolumeVolumeParameterOneOf.toJSON(v);
             };
+
         // JSON-facing Motoko type: mirrors JSON structure
         // Named "JSON" to avoid shadowing the outer SetVolumeVolumeParameter type
         public type JSON = {
