@@ -220,6 +220,90 @@
           }
         }
       }
+    },
+    "/matrix/arrays": {
+      "post": {
+        "operationId": "testArrayMatrix",
+        "summary": "Test all array container types: Array<T> for various T",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrayMatrix"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Echo back the array matrix",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArrayMatrix"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/maps": {
+      "post": {
+        "operationId": "testMapMatrix",
+        "summary": "Test all map container types: Map<String, T> for various T",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapMatrix"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Echo back the map matrix",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapMatrix"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/optionals": {
+      "post": {
+        "operationId": "testOptionalMatrix",
+        "summary": "Test optional versions of container types",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OptionalMatrix"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Echo back the optional matrix",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptionalMatrix"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -587,6 +671,248 @@
             "description": "Array of enum values",
             "items": {
               "$ref": "#/components/schemas/Status"
+            }
+          }
+        }
+      },
+      "SimpleObject": {
+        "type": "object",
+        "description": "Simple object for use in matrix tests",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ArrayMatrix": {
+        "type": "object",
+        "description": "Matrix test: Array<T> for all element types T",
+        "required": [
+          "arrayOfStrings",
+          "arrayOfInts",
+          "arrayOfBools",
+          "arrayOfEnums",
+          "arrayOfObjects",
+          "arrayOfArrays",
+          "arrayOfMaps"
+        ],
+        "properties": {
+          "arrayOfStrings": {
+            "type": "array",
+            "description": "Array<Text>",
+            "items": {
+              "type": "string"
+            }
+          },
+          "arrayOfInts": {
+            "type": "array",
+            "description": "Array<Int>",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "arrayOfBools": {
+            "type": "array",
+            "description": "Array<Bool>",
+            "items": {
+              "type": "boolean"
+            }
+          },
+          "arrayOfEnums": {
+            "type": "array",
+            "description": "Array<Status>",
+            "items": {
+              "$ref": "#/components/schemas/Status"
+            }
+          },
+          "arrayOfObjects": {
+            "type": "array",
+            "description": "Array<SimpleObject>",
+            "items": {
+              "$ref": "#/components/schemas/SimpleObject"
+            }
+          },
+          "arrayOfArrays": {
+            "type": "array",
+            "description": "Array<Array<Int>> - 2D array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "arrayOfMaps": {
+            "type": "array",
+            "description": "Array<Map<Text, Int>>",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              }
+            }
+          },
+          "arrayOf3D": {
+            "type": "array",
+            "description": "Array<Array<Array<Text>>> - 3D array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "MapMatrix": {
+        "type": "object",
+        "description": "Matrix test: Map<Text, T> for all value types T",
+        "required": [
+          "mapOfStrings",
+          "mapOfInts",
+          "mapOfBools",
+          "mapOfEnums",
+          "mapOfObjects",
+          "mapOfArrays",
+          "mapOfMaps"
+        ],
+        "properties": {
+          "mapOfStrings": {
+            "type": "object",
+            "description": "Map<Text, Text>",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "mapOfInts": {
+            "type": "object",
+            "description": "Map<Text, Int>",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "mapOfBools": {
+            "type": "object",
+            "description": "Map<Text, Bool>",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "mapOfEnums": {
+            "type": "object",
+            "description": "Map<Text, Status>",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Status"
+            }
+          },
+          "mapOfObjects": {
+            "type": "object",
+            "description": "Map<Text, SimpleObject>",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SimpleObject"
+            }
+          },
+          "mapOfArrays": {
+            "type": "object",
+            "description": "Map<Text, Array<Text>>",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "mapOfMaps": {
+            "type": "object",
+            "description": "Map<Text, Map<Text, Int>> - nested maps",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "OptionalMatrix": {
+        "type": "object",
+        "description": "Matrix test: Optional<T> for container types",
+        "properties": {
+          "optArrayOfStrings": {
+            "type": "array",
+            "description": "?Array<Text>",
+            "items": {
+              "type": "string"
+            }
+          },
+          "optArrayOfEnums": {
+            "type": "array",
+            "description": "?Array<Status>",
+            "items": {
+              "$ref": "#/components/schemas/Status"
+            }
+          },
+          "optArrayOfObjects": {
+            "type": "array",
+            "description": "?Array<SimpleObject>",
+            "items": {
+              "$ref": "#/components/schemas/SimpleObject"
+            }
+          },
+          "optMapOfStrings": {
+            "type": "object",
+            "description": "?Map<Text, Text>",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "optMapOfEnums": {
+            "type": "object",
+            "description": "?Map<Text, Status>",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Status"
+            }
+          },
+          "optMapOfObjects": {
+            "type": "object",
+            "description": "?Map<Text, SimpleObject>",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SimpleObject"
+            }
+          },
+          "arrayOfOptStrings": {
+            "type": "array",
+            "description": "Array<?Text>",
+            "items": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          "arrayOfOptEnums": {
+            "type": "array",
+            "description": "Array<?Status>",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Status"
+                }
+              ],
+              "nullable": true
+            }
+          },
+          "mapOfOptInts": {
+            "type": "object",
+            "description": "Map<Text, ?Int>",
+            "additionalProperties": {
+              "type": "integer",
+              "nullable": true
             }
           }
         }
