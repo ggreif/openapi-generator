@@ -430,6 +430,173 @@ The **Janus Types** approach elegantly solves the OpenAPI enum challenge:
 
 This approach bridges the impedance mismatch between OpenAPI's JSON representation and Motoko's type system while maintaining full type safety and requiring no compiler or library changes.
 
+## URL Parameter Serialization with toText()
+
+### Problem
+
+OneOf types used in URL query parameters and path parameters cannot use the standard JSON serialization:
+- JSON serialization produces JSON objects or requires Candid conversion
+- URL parameters need plain text strings: `volume=42` or `status=published`
+- Need variant-aware text conversion for mixed oneOf types (combining integers, enums, and objects)
+
+### Solution: toText() Helper Function
+
+For oneOf types, the generator automatically creates a `toText()` function in the JSON sub-module that converts each variant to its URL-safe text representation. This function handles the different variant types appropriately:
+
+**Generated Pattern:**
+```motoko
+module {
+    public type VolumeParameter = {
+        #one_of_0 : Nat;                      // Integer variant
+        #VolumeParameterOneOf : VolumeParameterOneOf;  // Enum variant
+    };
+
+    public module JSON {
+        // URL parameter serialization
+        public func toText(value : VolumeParameter) : Text =
+            switch (value) {
+                case (#one_of_0(v)) Int.toText(v);
+                case (#VolumeParameterOneOf(v)) VolumeParameterOneOf.toJSON(v);
+            };
+
+        // JSON body serialization (existing)
+        public func toJSON(value : VolumeParameter) : JSON = ...
+        public func fromJSON(json : JSON) : ?VolumeParameter = ...
+    }
+}
+```
+
+### Variant Type Conversion Rules
+
+Each variant type in a oneOf discriminated union requires specific text conversion logic:
+
+| Variant Type | Conversion Logic | Example Input | Example Output |
+|--------------|-----------------|---------------|----------------|
+| **Numeric (Nat/Int)** | `Int.toText(v)` | `#one_of_0(42)` | `"42"` |
+| **Enum Model** | `{Type}.toJSON(v)` | `#VolumeParameterOneOf(#up)` | `"up"` |
+| **Object/Record** | `debug_show(v)` | `#MixedOneOfOneOf({custom="foo"})` | `"{custom = \"foo\"}"` |
+| **Unit Variant** | String literal | `#up` | `"up"` |
+
+**Rationale:**
+- **Numeric types**: Use standard Motoko text conversion
+- **Enum models**: Reuse existing `toJSON()` which already returns Text with proper escaping
+- **Complex objects**: Use `debug_show()` for readable serialization
+- **Unit variants**: Use the original enum value as a string literal
+
+### API Usage Pattern
+
+The API template automatically detects oneOf types and uses the appropriate serialization method:
+
+**Query Parameters with oneOf:**
+```motoko
+// Generated API code automatically uses toText() for oneOf parameters
+public func setVolume(config : Config__, volume : VolumeParameter, zone : Text) : async* SetVolume200Response {
+    let url = baseUrl # "/set-volume"
+        # "?" # "volume=" # VolumeParameter.toText(volume)  // Uses toText()
+        # "&" # "zone=" # zone;
+    // ... rest of implementation
+}
+```
+
+**Path Parameters with oneOf:**
+```motoko
+// Path parameters also use toText() when the parameter type is oneOf
+let url = baseUrl # "/items/{id}"
+    |> Text.replace(_, #text "{id}", ItemId.toText(itemId));  // Uses toText()
+```
+
+**Simple Enums (non-oneOf):**
+```motoko
+// Simple enums continue to use toJSON() which also returns Text
+public func getStatus(config : Config__, status : PostStatus) : async* Response {
+    let url = baseUrl # "/get-status"
+        # "?" # "status=" # PostStatus.toJSON(status);  // Uses toJSON()
+    // ...
+}
+```
+
+### Implementation Details
+
+**Java Code Generation:**
+
+1. **In `MotokoClientCodegen.fromModel()`** (lines 429-509):
+   - Add type classification flags to each oneOf variant:
+     - `isNumericType`: true for Int/Nat types
+     - `isEnumType`: true for enum model references
+     - `isObjectType`: true for complex record types
+   - These flags guide template logic for generating the correct conversion
+
+2. **In `MotokoClientCodegen.postProcessOperationsWithModels()`** (lines 1093-1119):
+   - Check each operation parameter's dataType against all models
+   - If parameter type matches a oneOf model (has `x-is-oneof` vendor extension), mark the parameter with `x-is-oneof-type` vendor extension
+   - This flag tells the API template to use `.toText()` instead of `.toJSON()`
+
+**Template Logic:**
+
+1. **In `model.mustache`** (oneOf section, lines 62-103):
+   - Generate `toText()` function before `toJSON()` in the JSON sub-module
+   - Use type classification flags to emit the correct conversion for each variant
+   - Handle unit variants (inline enums) with string literals from `enumValue`
+
+2. **In `api.mustache`** (lines 85-86):
+   - Check for `x-is-oneof-type` vendor extension first
+   - If present, use `{Type}.toText()` for URL serialization
+   - Otherwise, fall back to existing logic (`toJSON()` for enums, `Int.toText()` for integers, etc.)
+
+### Benefits
+
+1. **Type Safety**: Compile-time verification of variant conversions through Motoko's type checker
+2. **Correctness**: Proper URL encoding for all variant types, matching OpenAPI semantics
+3. **Consistency**: Unified approach across all oneOf types regardless of variant composition
+4. **Extensibility**: Easy to add new conversion patterns for additional Motoko types
+5. **Separation of Concerns**: URL serialization (`toText()`) is distinct from JSON body serialization (`toJSON()`)
+
+### Examples from Test Suite
+
+Real-world examples from the enum-test client demonstrate the pattern:
+
+**VolumeParameter (Integer + Enum):**
+```motoko
+// samples/client/enum-test/generated/Models/VolumeParameter.mo (lines 19-23)
+public func toText(value : VolumeParameter) : Text =
+    switch (value) {
+        case (#one_of_0(v)) Int.toText(v);  // Nat variant → Int.toText
+        case (#VolumeParameterOneOf(v)) VolumeParameterOneOf.toJSON(v);  // Enum → .toJSON
+    };
+```
+
+**MixedOneOf (Integer + Enum + Object):**
+```motoko
+// samples/client/enum-test/generated/Models/MixedOneOf.mo (lines 22-27)
+public func toText(value : MixedOneOf) : Text =
+    switch (value) {
+        case (#one_of_0(v)) Int.toText(v);  // Int variant
+        case (#SimpleColorEnum(v)) SimpleColorEnum.toJSON(v);  // Enum variant
+        case (#MixedOneOfOneOf(v)) debug_show(v);  // Object variant
+    };
+```
+
+**API Usage:**
+```motoko
+// samples/client/enum-test/generated/Apis/DefaultApi.mo (line 75)
+let url = baseUrl # "/set-volume"
+    # "?" # "volume=" # VolumeParameter.toText(volume)  // Automatic toText() usage
+    # "&" # "zone=" # zone;
+```
+
+### Comparison: toText() vs toJSON()
+
+| Feature | toText() (oneOf) | toJSON() (simple enums) |
+|---------|-----------------|------------------------|
+| **Purpose** | URL parameter serialization | JSON body serialization |
+| **Input** | OneOf variant with mixed types | Simple enum variant |
+| **Output** | Plain Text string | Text (for string enums) or Int (for numeric enums) |
+| **Used by** | Path/query parameter handling in API template | Both URL parameters and JSON body serialization |
+| **Type handling** | Variant-specific logic (Int.toText, .toJSON, debug_show) | Uniform mapping to JSON values |
+| **When generated** | For oneOf types only | For all enum types |
+
+**Note:** Simple enum types can use `toJSON()` for both URL parameters and JSON body serialization because the result is always Text. OneOf types need `toText()` specifically for URL parameters because they may contain non-text types that require conversion.
+
 ## Historical Context: Initial Implementation Attempt
 
 **Note:** This section describes the initial implementation attempt using `renameKeys` only. See "Solution: Janus Types (Parallel Type Hierarchies)" above for the working approach.

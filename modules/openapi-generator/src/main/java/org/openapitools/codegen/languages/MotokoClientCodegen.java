@@ -457,6 +457,11 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                                 variant.put("enumValue", String.valueOf(enumValue));
                                 variant.put("isStringEnum", enumValue instanceof String);
 
+                                // Type classification flags (not used for unit variants, but added for consistency)
+                                variant.put("isNumericType", false);
+                                variant.put("isEnumType", false);
+                                variant.put("isObjectType", false);
+
                                 oneOfVariants.add(variant);
                             }
                             continue;  // Skip regular processing for this enum option
@@ -487,6 +492,32 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                     variant.put("hasType", true);  // Typed variant (has associated data)
                     variant.put("isUnsigned", isUnsigned);
                     variant.put("needsConversion", !variantType.equals(jsonType));
+
+                    // Add type classification flags for toText() generation
+                    boolean isNumericType = false;
+                    boolean isEnumType = false;
+                    boolean isObjectType = false;
+
+                    if (isUnsigned || "Nat".equals(variantType) || "Int".equals(variantType)) {
+                        // Numeric types: Int, Nat
+                        isNumericType = true;
+                    } else if (Boolean.TRUE.equals(oneOfProp.isEnum) ||
+                               (variantType != null && variantType.endsWith("Enum")) ||
+                               Boolean.TRUE.equals(oneOfProp.vendorExtensions.get("x-is-enum")) ||
+                               (oneOfProp.allowableValues != null && !oneOfProp.allowableValues.isEmpty())) {
+                        // Enum types: detected by isEnum flag, "Enum" suffix, vendor extension, or allowableValues
+                        isEnumType = true;
+                    } else if (oneOfProp.complexType != null || Boolean.TRUE.equals(oneOfProp.isModel)) {
+                        // Complex object/record types
+                        isObjectType = true;
+                    } else {
+                        // Default to object type for unknown cases
+                        isObjectType = true;
+                    }
+
+                    variant.put("isNumericType", isNumericType);
+                    variant.put("isEnumType", isEnumType);
+                    variant.put("isObjectType", isObjectType);
 
                     oneOfVariants.add(variant);
                 }
@@ -1070,6 +1101,33 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                         if (param.dataType != null && param.dataType.contains("Map<")) {
                             needsMapImport = true;
                             break;
+                        }
+                    }
+                }
+
+                // Mark oneOf parameters with x-is-oneof-type vendor extension
+                // This tells api.mustache to use .toText() instead of .toJSON() for URL parameters
+                // We need to mark parameters in allParams, queryParams, and pathParams lists
+                if (allModels != null) {
+                    List<List<org.openapitools.codegen.CodegenParameter>> paramLists = new ArrayList<>();
+                    if (op.allParams != null) paramLists.add(op.allParams);
+                    if (op.queryParams != null) paramLists.add(op.queryParams);
+                    if (op.pathParams != null) paramLists.add(op.pathParams);
+
+                    for (List<org.openapitools.codegen.CodegenParameter> paramList : paramLists) {
+                        for (org.openapitools.codegen.CodegenParameter param : paramList) {
+                            if (param.dataType != null) {
+                                // Check if this parameter's type is a oneOf model
+                                for (ModelMap modelMap : allModels) {
+                                    CodegenModel model = modelMap.getModel();
+                                    if (model != null && model.classname.equals(param.dataType)) {
+                                        if (Boolean.TRUE.equals(model.vendorExtensions.get("x-is-oneof"))) {
+                                            param.vendorExtensions.put("x-is-oneof-type", true);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
