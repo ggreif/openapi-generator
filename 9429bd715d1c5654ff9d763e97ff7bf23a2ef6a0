@@ -1,3 +1,10 @@
+---
+✅ RESOLVED: Janus Types implementation complete
+The parallel type hierarchy approach (user-facing variants + JSON-facing types)
+is fully implemented with toJSON/fromJSON conversion functions for all model types.
+
+---
+
 # Enum Serialization: The Janus Types Solution
 
 This document describes the Janus Types approach for handling OpenAPI enums and oneOf discriminated unions in the Motoko generator. The solution provides type-safe bidirectional conversion between JSON representations and user-facing Motoko variant types.
