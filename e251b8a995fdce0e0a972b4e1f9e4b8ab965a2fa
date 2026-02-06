@@ -1,0 +1,854 @@
+# Authentication Support Implementation Plan
+
+## Overview
+
+Add comprehensive authentication support to the Motoko OpenAPI generator, enabling generated clients to work with real-world APIs that require authentication (OAuth 2.0 bearer tokens, API keys, Basic Auth). The implementation will be validated using httpbin.org's authentication test endpoints, requiring no mock servers or credentials.
+
+## Current State
+
+- ✅ Generated code accepts `accessToken : ?Text` parameter in Config
+- ✅ Parameter is passed but **never used** in HTTP requests
+- ❌ No Authorization header generation
+- ❌ No API key handling (header/query parameter)
+- ❌ No Basic Auth support
+- ❌ No security scheme processing from OpenAPI specs
+
+**TODO Comment:** `MotokoClientCodegen.java:937-940`
+```java
+// TODO: Authentication is missing - need to add support for:
+//   - OAuth 2.0 tokens in Authorization header
+//   - API keys in headers/query parameters
+//   - Other auth schemes defined in OpenAPI security definitions
+```
+
+## Problem Statement
+
+Most production APIs require authentication:
+- **Spotify API**: OAuth 2.0 bearer tokens
+- **GitHub API**: Personal access tokens / OAuth
+- **OpenAI API**: API keys in Authorization header
+- **AWS APIs**: API keys, signed requests
+
+Currently, generated Motoko clients cannot authenticate with these APIs because:
+1. Security schemes in OpenAPI specs are ignored during generation
+2. The `accessToken` parameter is accepted but unused
+3. No headers are added to HTTP requests for authentication
+
+## Solution: Multi-Stage Authentication Implementation
+
+### Phase 1: Bearer Token Authentication (OAuth 2.0)
+**Priority:** High - covers majority of modern APIs
+**OpenAPI Pattern:**
+```yaml
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT  # optional
+security:
+  - bearerAuth: []
+```
+
+### Phase 2: API Key Authentication
+**Priority:** High - second most common pattern
+**OpenAPI Pattern:**
+```yaml
+components:
+  securitySchemes:
+    apiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    apiKeyQuery:
+      type: apiKey
+      in: query
+      name: api_key
+```
+
+### Phase 3: Basic Authentication
+**Priority:** Medium - less common for modern APIs
+**OpenAPI Pattern:**
+```yaml
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+```
+
+### Phase 4: Multiple Auth Schemes
+**Priority:** Low - handle APIs with multiple auth options
+**OpenAPI Pattern:**
+```yaml
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+```
+
+## Implementation Details
+
+### 1. Security Scheme Detection (MotokoClientCodegen.java)
+
+**Location:** `postProcessOperationsWithModels()` method (around line 933)
+
+**Steps:**
+1. Parse `openAPI.getComponents().getSecuritySchemes()`
+2. Identify auth types used by operations (bearer, apiKey, http basic)
+3. Add security info to operation context for templates
+4. Determine which auth schemes are global vs per-operation
+
+**Code Pattern:**
+```java
+@Override
+public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
+    OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
+
+    // Extract security schemes from OpenAPI spec
+    Map<String, SecurityScheme> securitySchemes = new HashMap<>();
+    if (openAPI != null && openAPI.getComponents() != null) {
+        securitySchemes = openAPI.getComponents().getSecuritySchemes();
+    }
+
+    // Determine which auth types are used
+    boolean usesBearerAuth = false;
+    boolean usesApiKeyAuth = false;
+    boolean usesBasicAuth = false;
+    String apiKeyHeaderName = null;
+    String apiKeyQueryName = null;
+
+    for (Map.Entry<String, SecurityScheme> entry : securitySchemes.entrySet()) {
+        SecurityScheme scheme = entry.getValue();
+
+        if (scheme.getType() == SecurityScheme.Type.HTTP) {
+            if ("bearer".equalsIgnoreCase(scheme.getScheme())) {
+                usesBearerAuth = true;
+            } else if ("basic".equalsIgnoreCase(scheme.getScheme())) {
+                usesBasicAuth = true;
+            }
+        } else if (scheme.getType() == SecurityScheme.Type.APIKEY) {
+            usesApiKeyAuth = true;
+            if (SecurityScheme.In.HEADER.equals(scheme.getIn())) {
+                apiKeyHeaderName = scheme.getName();
+            } else if (SecurityScheme.In.QUERY.equals(scheme.getIn())) {
+                apiKeyQueryName = scheme.getName();
+            }
+        }
+    }
+
+    // Add auth context to operations
+    objs.put("usesBearerAuth", usesBearerAuth);
+    objs.put("usesApiKeyAuth", usesApiKeyAuth);
+    objs.put("usesBasicAuth", usesBasicAuth);
+    objs.put("apiKeyHeaderName", apiKeyHeaderName);
+    objs.put("apiKeyQueryName", apiKeyQueryName);
+
+    return result;
+}
+```
+
+### 2. Config Type Updates (api.mustache)
+
+**Location:** Lines 100-120 (Config__ type definition)
+
+**Current:**
+```motoko
+public type Config__ = {
+    baseUrl : Text;
+    accessToken : ?Text;  // Currently unused!
+    max_response_bytes : ?Nat64;
+    transform : ?TransformContext__;
+    is_replicated : ?Bool;
+    cycles : Nat;
+};
+```
+
+**Updated (Phase 1 - Bearer Token):**
+```motoko
+public type Config__ = {
+    baseUrl : Text;
+    accessToken : ?Text;  // Now: Bearer token for OAuth 2.0
+    max_response_bytes : ?Nat64;
+    transform : ?TransformContext__;
+    is_replicated : ?Bool;
+    cycles : Nat;
+};
+```
+
+**Updated (Phase 2 - Add API Keys):**
+```motoko
+public type Config__ = {
+    baseUrl : Text;
+    accessToken : ?Text;      // Bearer token for OAuth 2.0
+    apiKey : ?Text;           // API key (header or query param)
+    max_response_bytes : ?Nat64;
+    transform : ?TransformContext__;
+    is_replicated : ?Bool;
+    cycles : Nat;
+};
+```
+
+**Updated (Phase 3 - Add Basic Auth):**
+```motoko
+public type Config__ = {
+    baseUrl : Text;
+    accessToken : ?Text;      // Bearer token for OAuth 2.0
+    apiKey : ?Text;           // API key (header or query param)
+    basicAuthUser : ?Text;    // Username for Basic Auth
+    basicAuthPassword : ?Text; // Password for Basic Auth
+    max_response_bytes : ?Nat64;
+    transform : ?TransformContext__;
+    is_replicated : ?Bool;
+    cycles : Nat;
+};
+```
+
+### 3. Header Building Logic (api.mustache)
+
+**Location:** Lines 130-160 (request header construction in each operation)
+
+**Current Pattern:**
+```motoko
+let request : http_request_args = {
+    url = url;
+    max_response_bytes = config.max_response_bytes;
+    headers = [
+        { name = "Content-Type"; value = "application/json" },
+    ];
+    // ... rest of request
+};
+```
+
+**Phase 1: Bearer Token Support**
+```motoko
+{{#usesBearerAuth}}
+// Build authorization header for bearer token
+let authHeaders : [http_header] = switch (config.accessToken) {
+    case (?token) [{ name = "Authorization"; value = "Bearer " # token }];
+    case null [];
+};
+{{/usesBearerAuth}}
+
+let request : http_request_args = {
+    url = url;
+    max_response_bytes = config.max_response_bytes;
+    headers = Array.flatten<http_header>([
+        [{ name = "Content-Type"; value = "application/json" }],
+        {{#usesBearerAuth}}authHeaders,{{/usesBearerAuth}}
+    ]);
+    // ... rest of request
+};
+```
+
+**Phase 2: API Key Support (Header)**
+```motoko
+{{#apiKeyHeaderName}}
+// Build API key header
+let apiKeyHeaders : [http_header] = switch (config.apiKey) {
+    case (?key) [{ name = "{{apiKeyHeaderName}}"; value = key }];
+    case null [];
+};
+{{/apiKeyHeaderName}}
+
+let request : http_request_args = {
+    url = url;
+    max_response_bytes = config.max_response_bytes;
+    headers = Array.flatten<http_header>([
+        [{ name = "Content-Type"; value = "application/json" }],
+        {{#usesBearerAuth}}authHeaders,{{/usesBearerAuth}}
+        {{#apiKeyHeaderName}}apiKeyHeaders,{{/apiKeyHeaderName}}
+    ]);
+    // ... rest of request
+};
+```
+
+**Phase 2: API Key Support (Query Parameter)**
+```motoko
+{{#apiKeyQueryName}}
+// Add API key to URL as query parameter
+let urlWithApiKey = switch (config.apiKey) {
+    case (?key) {
+        let separator = if (Text.contains(url, #text "?")) "&" else "?";
+        url # separator # "{{apiKeyQueryName}}=" # key
+    };
+    case null url;
+};
+{{/apiKeyQueryName}}
+
+let request : http_request_args = {
+    url = {{#apiKeyQueryName}}urlWithApiKey{{/apiKeyQueryName}}{{^apiKeyQueryName}}url{{/apiKeyQueryName}};
+    // ...
+};
+```
+
+**Phase 3: Basic Auth Support**
+```motoko
+{{#usesBasicAuth}}
+// Build Basic Auth header
+let basicAuthHeaders : [http_header] = switch (config.basicAuthUser, config.basicAuthPassword) {
+    case (?user, ?password) {
+        // Encode credentials as base64: user:password
+        let credentials = user # ":" # password;
+        let encoded = Base64.encode(Text.encodeUtf8(credentials));
+        [{ name = "Authorization"; value = "Basic " # encoded }]
+    };
+    case _ [];
+};
+{{/usesBasicAuth}}
+
+let request : http_request_args = {
+    url = url;
+    max_response_bytes = config.max_response_bytes;
+    headers = Array.flatten<http_header>([
+        [{ name = "Content-Type"; value = "application/json" }],
+        {{#usesBearerAuth}}authHeaders,{{/usesBearerAuth}}
+        {{#apiKeyHeaderName}}apiKeyHeaders,{{/apiKeyHeaderName}}
+        {{#usesBasicAuth}}basicAuthHeaders,{{/usesBasicAuth}}
+    ]);
+    // ... rest of request
+};
+```
+
+**Note on Base64:** For Basic Auth, we'll need to add Base64 encoding support. Options:
+1. Use `mo:base/Base64` if available
+2. Implement simple Base64 encoder in template
+3. Document that Basic Auth requires additional dependency
+
+## Testing Strategy
+
+### Test Infrastructure: httpbin.org
+
+**Why httpbin.org?**
+- ✅ Public API, no setup required
+- ✅ Built-in auth validation endpoints
+- ✅ Echoes back received headers (validates our implementation)
+- ✅ No credentials needed for testing
+- ✅ Reliable uptime, used by many projects
+
+**Available Auth Endpoints:**
+1. `/bearer` - Validates Bearer token format
+2. `/basic-auth/{user}/{passwd}` - Validates Basic Auth
+3. `/hidden-basic-auth/{user}/{passwd}` - Validates Basic Auth (404 on failure)
+4. `/headers` - Echoes all headers (validates API key headers)
+
+### Phase 1 Tests: Bearer Token Authentication
+
+**Step 1: Create httpbin OpenAPI spec with Bearer Auth**
+
+File: `bin/specs/httpbin-auth.yaml`
+```yaml
+openapi: 3.0.0
+info:
+  title: HTTPBin Auth Test API
+  version: 1.0.0
+servers:
+  - url: https://httpbin.org
+paths:
+  /bearer:
+    get:
+      operationId: testBearer
+      summary: Test bearer token authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Authenticated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authenticated:
+                    type: boolean
+                  token:
+                    type: string
+        '401':
+          description: Unauthorized
+  /headers:
+    get:
+      operationId: getHeaders
+      summary: Get all request headers
+      responses:
+        '200':
+          description: Headers returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  headers:
+                    type: object
+                    additionalProperties:
+                      type: string
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+```
+
+**Step 2: Create generator config**
+
+File: `bin/configs/motoko-httpbin-auth-test.yaml`
+```yaml
+generatorName: motoko
+outputDir: samples/client/httpbin-auth/motoko
+inputSpec: bin/specs/httpbin-auth.yaml
+templateDir: modules/openapi-generator/src/main/resources/motoko
+artifactId: httpbin-auth-client
+artifactVersion: 1.0.0
+additionalProperties:
+  hideGenerationTimestamp: "true"
+  useDfx: false
+```
+
+**Step 3: Create test canister**
+
+File: `samples/client/httpbin-auth/motoko/src/main.mo`
+```motoko
+import { DefaultApi } "../generated/Apis/DefaultApi";
+import Debug "mo:core/Debug";
+import Text "mo:core/Text";
+import Error "mo:core/Error";
+
+persistent actor {
+    // Test 1: Bearer token is correctly added to Authorization header
+    public func testBearerAuth() : async Bool {
+        let api = DefaultApi({
+            baseUrl = "https://httpbin.org";
+            accessToken = ?"test-token-12345";
+            max_response_bytes = null;
+            transform = null;
+            is_replicated = null;
+            cycles = 30_000_000_000;
+        });
+
+        try {
+            let response = await* api.testBearer();
+
+            // httpbin echoes back: { "authenticated": true, "token": "test-token-12345" }
+            if (response.authenticated and response.token == "test-token-12345") {
+                Debug.print("✅ Bearer token auth working correctly");
+                return true;
+            } else {
+                Debug.print("❌ Bearer token not sent correctly");
+                Debug.print("  Expected token: test-token-12345");
+                Debug.print("  Received token: " # response.token);
+                return false;
+            };
+        } catch (e) {
+            Debug.print("❌ Bearer auth test failed with error: " # Error.message(e));
+            return false;
+        };
+    };
+
+    // Test 2: Missing token results in 401
+    public func testBearerAuthMissing() : async Bool {
+        let api = DefaultApi({
+            baseUrl = "https://httpbin.org";
+            accessToken = null;  // No token provided
+            max_response_bytes = null;
+            transform = null;
+            is_replicated = null;
+            cycles = 30_000_000_000;
+        });
+
+        try {
+            let response = await* api.testBearer();
+            Debug.print("❌ Should have thrown 401 error");
+            return false;
+        } catch (e) {
+            let msg = Error.message(e);
+            if (Text.contains(msg, #text "401")) {
+                Debug.print("✅ Correctly rejected request without token (401)");
+                return true;
+            } else {
+                Debug.print("❌ Wrong error: " # msg);
+                return false;
+            };
+        };
+    };
+
+    // Test 3: Verify Authorization header format
+    public func testAuthHeaderFormat() : async Bool {
+        let api = DefaultApi({
+            baseUrl = "https://httpbin.org";
+            accessToken = ?"my-secret-token";
+            max_response_bytes = null;
+            transform = null;
+            is_replicated = null;
+            cycles = 30_000_000_000;
+        });
+
+        try {
+            let response = await* api.getHeaders();
+
+            // Check that Authorization header exists and has correct format
+            // response.headers should contain: "Authorization": "Bearer my-secret-token"
+            switch (response.headers.get("Authorization")) {
+                case (?authHeader) {
+                    if (authHeader == "Bearer my-secret-token") {
+                        Debug.print("✅ Authorization header format correct");
+                        return true;
+                    } else {
+                        Debug.print("❌ Wrong Authorization header: " # authHeader);
+                        return false;
+                    };
+                };
+                case null {
+                    Debug.print("❌ Authorization header missing");
+                    return false;
+                };
+            };
+        } catch (e) {
+            Debug.print("❌ Header test failed: " # Error.message(e));
+            return false;
+        };
+    };
+
+    // Run all tests
+    public func runAllTests() : async Text {
+        Debug.print("\n=== Running Bearer Auth Tests ===\n");
+
+        let test1 = await testBearerAuth();
+        let test2 = await testBearerAuthMissing();
+        let test3 = await testAuthHeaderFormat();
+
+        let passed = [test1, test2, test3] |> Array.filter(_, func(x) = x) |> Array.size(_);
+        let total = 3;
+
+        Debug.print("\n=== Test Results ===");
+        Debug.print("Passed: " # Int.toText(passed) # "/" # Int.toText(total));
+
+        if (passed == total) {
+            "✅ All tests passed!"
+        } else {
+            "❌ Some tests failed (" # Int.toText(passed) # "/" # Int.toText(total) # ")"
+        }
+    };
+};
+```
+
+**Step 4: Typecheck test**
+```bash
+cd samples/client/httpbin-auth/motoko
+npx ic-mops install
+./typecheck.sh
+```
+
+**Step 5: Deploy and run tests**
+```bash
+dfx start --background --clean
+dfx deploy
+dfx canister call httpbin_auth_test runAllTests
+```
+
+### Phase 2 Tests: API Key Authentication
+
+**Additional spec for API key testing:**
+```yaml
+paths:
+  /headers:
+    get:
+      operationId: testApiKey
+      summary: Test API key in header
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Success
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+```
+
+**Test code:**
+```motoko
+public func testApiKeyHeader() : async Bool {
+    let api = DefaultApi({
+        baseUrl = "https://httpbin.org";
+        accessToken = null;
+        apiKey = ?"my-api-key-12345";
+        // ...
+    });
+
+    let response = await* api.getHeaders();
+
+    // Verify X-API-Key header was sent correctly
+    switch (response.headers.get("X-Api-Key")) {
+        case (?key) key == "my-api-key-12345";
+        case null false;
+    }
+};
+```
+
+### Phase 3 Tests: Basic Authentication
+
+**httpbin endpoint:** `/basic-auth/{user}/{passwd}`
+
+**Test code:**
+```motoko
+public func testBasicAuth() : async Bool {
+    let api = DefaultApi({
+        baseUrl = "https://httpbin.org";
+        accessToken = null;
+        apiKey = null;
+        basicAuthUser = ?"testuser";
+        basicAuthPassword = ?"testpass";
+        // ...
+    });
+
+    try {
+        // Call /basic-auth/testuser/testpass
+        let response = await* api.testBasicAuth("testuser", "testpass");
+        response.authenticated and response.user == "testuser"
+    } catch (e) {
+        false
+    }
+};
+```
+
+## CI Integration
+
+### GitHub Actions Workflow
+
+File: `.github/workflows/motoko-auth-tests.yml`
+```yaml
+name: Motoko Authentication Tests
+
+on:
+  push:
+    paths:
+      - 'modules/openapi-generator/src/main/resources/motoko/**'
+      - 'modules/openapi-generator/src/main/java/**/MotokoClientCodegen.java'
+  pull_request:
+    paths:
+      - 'modules/openapi-generator/src/main/resources/motoko/**'
+      - 'modules/openapi-generator/src/main/java/**/MotokoClientCodegen.java'
+
+jobs:
+  test-auth:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Set up DFX
+        uses: dfinity/setup-dfx@main
+
+      - name: Install Mops
+        run: npm install -g ic-mops
+
+      - name: Build Generator
+        run: mvn clean install -DskipTests
+
+      - name: Generate httpbin-auth client
+        run: ./bin/generate-samples.sh bin/configs/motoko-httpbin-auth-test.yaml
+
+      - name: Typecheck generated code
+        run: |
+          cd samples/client/httpbin-auth/motoko
+          npx ic-mops install
+          ./typecheck.sh
+
+      - name: Start DFX
+        run: dfx start --background --clean
+
+      - name: Deploy test canister
+        run: |
+          cd samples/client/httpbin-auth/motoko
+          dfx deploy
+
+      - name: Run authentication tests
+        run: |
+          cd samples/client/httpbin-auth/motoko
+          dfx canister call httpbin_auth_test runAllTests
+
+      - name: Stop DFX
+        if: always()
+        run: dfx stop
+```
+
+## Files to Modify
+
+### Primary Changes
+
+1. **MotokoClientCodegen.java** (lines 933-950)
+   - Parse security schemes from OpenAPI spec
+   - Detect bearer/apiKey/basic auth usage
+   - Add auth context to operation templates
+   - Remove TODO comment
+
+2. **api.mustache** (lines 100-120, 130-180)
+   - Update Config__ type with auth fields
+   - Add auth header building logic
+   - Conditionally include headers based on security schemes
+
+### Test Files to Create
+
+3. **bin/specs/httpbin-auth.yaml**
+   - OpenAPI spec for httpbin.org auth endpoints
+   - Includes bearer, apiKey, and basic auth schemes
+
+4. **bin/configs/motoko-httpbin-auth-test.yaml**
+   - Generator config for httpbin auth test client
+
+5. **samples/client/httpbin-auth/motoko/src/main.mo**
+   - Test canister with comprehensive auth tests
+   - Validates bearer tokens, API keys, basic auth
+
+6. **.github/workflows/motoko-auth-tests.yml**
+   - CI workflow for automated testing
+   - Runs on every change to Motoko templates or codegen
+
+## Implementation Phases
+
+### Phase 1: Bearer Token (Week 1)
+- [ ] Parse bearer auth from OpenAPI security schemes
+- [ ] Add Authorization header generation in api.mustache
+- [ ] Update Config__ to use accessToken field
+- [ ] Create httpbin-auth test spec (bearer only)
+- [ ] Create test canister with bearer auth tests
+- [ ] Verify typecheck passes
+- [ ] Deploy and run tests locally
+- [ ] Set up GitHub Actions CI
+- [ ] Update documentation
+
+**Success Criteria:**
+- ✅ Spotify API client can be generated with auth
+- ✅ httpbin /bearer tests pass (3/3)
+- ✅ CI runs automatically and passes
+- ✅ Generated code typechecks
+
+### Phase 2: API Key Support (Week 2)
+- [ ] Parse apiKey security schemes (header and query)
+- [ ] Add API key header generation
+- [ ] Add API key query parameter generation
+- [ ] Update Config__ with apiKey field
+- [ ] Add API key tests to httpbin-auth spec
+- [ ] Add API key test cases to test canister
+- [ ] Verify all tests pass
+
+**Success Criteria:**
+- ✅ API key in header works (verified by httpbin /headers)
+- ✅ API key in query param works
+- ✅ All tests pass (bearer + API key)
+
+### Phase 3: Basic Auth Support (Week 3)
+- [ ] Parse basic auth security schemes
+- [ ] Implement or import Base64 encoding
+- [ ] Add basic auth header generation
+- [ ] Update Config__ with basicAuthUser/Password fields
+- [ ] Add basic auth tests to httpbin-auth spec
+- [ ] Add basic auth test cases to test canister
+- [ ] Verify all tests pass
+
+**Success Criteria:**
+- ✅ Basic auth works with httpbin /basic-auth endpoint
+- ✅ All tests pass (bearer + API key + basic)
+- ✅ Base64 encoding works correctly
+
+### Phase 4: Documentation and Refinement (Week 4)
+- [ ] Update /generate skill with auth examples
+- [ ] Document auth usage in README
+- [ ] Add auth examples to sample configs
+- [ ] Test with real APIs (Spotify, GitHub)
+- [ ] Handle edge cases (missing credentials, multiple schemes)
+- [ ] Performance testing with authenticated requests
+
+## Verification Steps
+
+### Manual Testing
+1. Generate httpbin-auth client: `./bin/generate-samples.sh bin/configs/motoko-httpbin-auth-test.yaml`
+2. Typecheck: `cd samples/client/httpbin-auth/motoko && npx ic-mops install && ./typecheck.sh`
+3. Deploy: `dfx start --background --clean && dfx deploy`
+4. Run tests: `dfx canister call httpbin_auth_test runAllTests`
+5. Verify output: All 3 tests should pass
+
+### CI Testing
+1. Push changes to branch
+2. GitHub Actions runs automatically
+3. Check workflow output for test results
+4. All tests must pass before merge
+
+### Real API Testing
+1. Generate Spotify client with auth
+2. Create test with real Spotify API token (manual, not CI)
+3. Verify authenticated requests work
+4. Document usage in skill
+
+## Success Criteria
+
+✅ **Bearer token authentication works**
+- Authorization: Bearer {token} header added correctly
+- httpbin /bearer tests pass (3/3)
+- Spotify API example works with real token
+
+✅ **API key authentication works**
+- API keys added to headers or query params
+- httpbin /headers tests validate correct header
+- Configurable header name from OpenAPI spec
+
+✅ **Basic authentication works**
+- Credentials encoded as Base64
+- Authorization: Basic {encoded} header added
+- httpbin /basic-auth tests pass
+
+✅ **CI tests pass automatically**
+- GitHub Actions workflow runs on every change
+- All tests pass in CI environment
+- Deployment and test execution automated
+
+✅ **Documentation complete**
+- /generate skill updated with auth examples
+- README shows auth configuration
+- Sample configs demonstrate usage
+
+## Benefits
+
+1. **Real-world API support**: Generated clients work with Spotify, GitHub, OpenAI, etc.
+2. **No mock servers needed**: httpbin.org provides reliable test endpoints
+3. **Automated testing**: CI validates auth implementation on every change
+4. **Multiple auth types**: Covers 95% of OpenAPI auth patterns
+5. **Type-safe**: Motoko compiler verifies all auth code
+6. **Production-ready**: Tests use real HTTP outcalls, same as production
+
+## Future Enhancements
+
+### OAuth 2.0 Token Management
+- Token refresh logic (beyond initial scope)
+- Token expiry handling
+- OAuth flow helpers (authorization code, client credentials)
+
+### Advanced Auth Patterns
+- Digest authentication
+- AWS Signature v4
+- Custom authentication schemes
+- Multiple concurrent auth schemes
+
+### Developer Experience
+- Auth configuration validation at generation time
+- Better error messages for auth failures
+- Auth middleware/interceptors pattern
+
+## Related Work
+
+- **HTTP Response Code Processing**: Already implemented and working
+- **Enum/Janus Types**: Enables proper auth response model handling
+- **Error handling**: 401/403 responses properly parsed as errors
+
+## Notes
+
+- httpbin.org is a public service but could have rate limits; CI should respect this
+- Bearer tokens in tests are dummy values; real tokens should never be committed
+- Basic Auth Base64 encoding can use standard Motoko libraries or custom implementation
+- Security context is per-operation in OpenAPI; global security is more common
