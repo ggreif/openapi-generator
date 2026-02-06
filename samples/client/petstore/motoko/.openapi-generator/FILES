@@ -4,8 +4,11 @@ Apis/UserApi.mo
 EnumMappings.mo
 Models/ApiResponse.mo
 Models/Category.mo
+Models/FindPetsByStatusStatusParameterInner.mo
 Models/Order.mo
+Models/OrderStatus.mo
 Models/Pet.mo
+Models/PetStatus.mo
 Models/Tag.mo
 Models/User.mo
 README.md
