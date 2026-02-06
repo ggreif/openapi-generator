@@ -6,10 +6,14 @@ Models/HTTPStatusEnum.mo
 Models/HttpHeader.mo
 Models/HyphenatedColorEnum.mo
 Models/InnerRecordWithEnum.mo
+Models/MixedOneOf.mo
+Models/MixedOneOfOneOf.mo
 Models/OuterRecord.mo
 Models/ReservedWordModel.mo
 Models/SimpleColorEnum.mo
 Models/TestHyphenatedEnumRequest.mo
 Models/TestNumericEnumRequest.mo
+Models/TestOneOfVariantRequest.mo
+Models/VolumeParameter.mo
 README.md
 mops.toml

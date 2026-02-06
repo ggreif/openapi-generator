@@ -1,6 +1,6 @@
 [package]
-name = ""
-version = ""
+name = "enum-test-client"
+version = "1.0.0"
 description = "Generated Motoko client for Enum Test API"
 
 [dependencies]

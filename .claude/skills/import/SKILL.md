@@ -2,7 +2,7 @@
 
 ## The Pattern
 
-When working with Motoko modules that have parallel type hierarchies (a Motoko-facing type and a JSON sub-module with JSON-facing types and conversion functions), use this import idiom:
+When working with Motoko modules that have parallel type hierarchies (a user-facing type and a JSON sub-module with JSON-facing types and conversion functions), use this import idiom:
 
 ```motoko
 import { type PostStatus; JSON = PostStatus } "./PostStatus";
@@ -12,7 +12,7 @@ import { type PostStatus; JSON = PostStatus } "./PostStatus";
 
 This import statement does two things:
 
-1. **Imports the type**: `type PostStatus` imports the Motoko-facing variant type (e.g., `#published`, `#in_progress`)
+1. **Imports the type**: `type PostStatus` imports the user-facing variant type (e.g., `#published`, `#in_progress`)
 2. **Imports and renames the JSON sub-module**: `JSON = PostStatus` imports the `JSON` sub-module from the PostStatus module and renames it locally to `PostStatus`
 
 The idiom is: **`JSON ~> PostStatus`** (JSON sub-module becomes PostStatus locally)
@@ -28,16 +28,16 @@ Motoko has separate namespaces for types and modules, so you can have:
 After this import, you have access to:
 
 ```motoko
-// 1. The Motoko-facing variant type
+// 1. The user-facing variant type
 let status : PostStatus = #published;
 
 // 2. The JSON-facing Motoko type (from the JSON sub-module)
 let jsonStatus : PostStatus.JSON = "published!";  // This is Text
 
-// 3. Conversion function: Motoko-facing → JSON-facing
+// 3. Conversion function: user-facing → JSON-facing
 let converted : PostStatus.JSON = PostStatus.toJSON(status);
 
-// 4. Conversion function: JSON-facing → Motoko-facing
+// 4. Conversion function: JSON-facing → user-facing
 let parsed : ?PostStatus = PostStatus.fromJSON(jsonStatus);
 ```
 
@@ -63,7 +63,7 @@ This import pattern works with modules structured like:
 ```motoko
 // Models/PostStatus.mo
 module {
-    // Motoko-facing type: type-safe variants
+    // user-facing type: type-safe variants
     public type PostStatus = {
         #in_progress;
         #published;
@@ -76,7 +76,7 @@ module {
         // Named "JSON" to avoid shadowing the outer PostStatus type
         public type JSON = Text;
 
-        // Convert Motoko-facing → JSON-facing
+        // Convert user-facing → JSON-facing
         public func toJSON(status : PostStatus) : JSON {
             switch (status) {
                 case (#in_progress) "in-progress";
@@ -85,7 +85,7 @@ module {
             }
         };
 
-        // Convert JSON-facing → Motoko-facing
+        // Convert JSON-facing → user-facing
         public func fromJSON(json : JSON) : ?PostStatus {
             switch (json) {
                 case "in-progress" ?#in_progress;
@@ -139,7 +139,7 @@ public module JSON {
 ## Context
 
 This pattern is used in OpenAPI-generated Motoko clients where:
-- Models have type-safe Motoko-facing variants for application code
+- Models have type-safe user-facing variants for application code
 - Models have JSON-facing types (Text, Nat, etc.) that mirror JSON structure
 - Conversion functions bridge between the two representations
 - No runtime type introspection or serde modifications needed

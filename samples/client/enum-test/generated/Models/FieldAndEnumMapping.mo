@@ -25,19 +25,17 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : FieldAndEnumMapping) : JSON = {
+        public func toJSON(value : FieldAndEnumMapping) : JSON = { value with
             status_code = HTTPStatusEnum.toJSON(value.status_code);
             availability_status = switch (value.availability_status) { case (?v) ?AvailabilityEnum.toJSON(v); case null null };
-            content_type = value.content_type;
         };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
         public func fromJSON(json : JSON) : ?FieldAndEnumMapping {
             let ?status_code = HTTPStatusEnum.fromJSON(json.status_code) else return null;
-            ?{
+            ?{ json with
                 status_code;
                 availability_status = switch (json.availability_status) { case (?v) AvailabilityEnum.fromJSON(v); case null null };
-                content_type = json.content_type;
             }
         };
     }

@@ -21,17 +21,15 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : OuterRecord) : JSON = {
+        public func toJSON(value : OuterRecord) : JSON = { value with
             inner = InnerRecordWithEnum.toJSON(value.inner);
-            id = value.id;
         };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
         public func fromJSON(json : JSON) : ?OuterRecord {
             let ?inner = InnerRecordWithEnum.fromJSON(json.inner) else return null;
-            ?{
+            ?{ json with
                 inner;
-                id = json.id;
             }
         };
     }

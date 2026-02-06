@@ -1,0 +1,202 @@
+// GenresApi.mo
+
+import Text "mo:core/Text";
+import Int "mo:core/Int";
+import Array "mo:core/Array";
+import Error "mo:core/Error";
+import { JSON } "mo:serde";
+import { type GetAnAlbum401Response; JSON = GetAnAlbum401Response } "../Models/GetAnAlbum401Response";
+import { type GetRecommendationGenres200Response; JSON = GetRecommendationGenres200Response } "../Models/GetRecommendationGenres200Response";
+
+module {
+    // Management Canister interface for HTTP outcalls
+    // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
+    type HttpHeader = {
+        name : Text;
+        value : Text;
+    };
+
+    type HttpMethod = {
+        #get;
+        #head;
+        #post;
+        // TODO: IC HTTP outcalls currently only support GET, HEAD, and POST.
+        //   PUT and DELETE methods are not yet supported by the management canister.
+        //   Once support is added, uncomment these:
+        // #put;
+        // #delete;
+    };
+
+    type CanisterHttpRequestArgument = {
+        url : Text;
+        max_response_bytes : ?Nat64;
+        method : HttpMethod;
+        headers : [HttpHeader];
+        body : ?Blob;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+        is_replicated : ?Bool;
+    };
+
+    type CanisterHttpResponsePayload = {
+        status : Nat;
+        headers : [HttpHeader];
+        body : Blob;
+    };
+
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
+
+    type Config__ = {
+        baseUrl : Text;
+        accessToken : ?Text;
+        max_response_bytes : ?Nat64;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+        is_replicated : ?Bool;
+        cycles : Nat;
+    };
+
+    /// Get Available Genre Seeds 
+    /// Retrieve a list of available genres seed parameter values for [recommendations](/documentation/web-api/reference/get-recommendations). 
+    public func getRecommendationGenres(config : Config__) : async* GetRecommendationGenres200Response {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/recommendations/available-genre-seeds";
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?GetRecommendationGenres200Response.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (GetRecommendationGenres200Response.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to GetRecommendationGenres200Response");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+            // Try parsing 401 response as GetAnAlbum401Response
+            if (response.status == 401) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 401: Bad or expired token. This can happen if the user revoked a token or the access token has expired. You should re-authenticate the user. " # errorDetail);
+            };
+            // Try parsing 403 response as GetAnAlbum401Response
+            if (response.status == 403) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 403: Bad OAuth request (wrong consumer key, bad nonce, expired timestamp...). Unfortunately, re-authenticating the user won&#39;t help here. " # errorDetail);
+            };
+            // Try parsing 429 response as GetAnAlbum401Response
+            if (response.status == 429) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 429: The app has exceeded its rate limits. " # errorDetail);
+            };
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+
+    let operations__ = {
+        getRecommendationGenres;
+    };
+
+    public module class GenresApi(config : Config__) {
+        /// Get Available Genre Seeds 
+        /// Retrieve a list of available genres seed parameter values for [recommendations](/documentation/web-api/reference/get-recommendations). 
+        public func getRecommendationGenres() : async GetRecommendationGenres200Response {
+            await* operations__.getRecommendationGenres(config)
+        };
+
+    }
+}

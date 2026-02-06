@@ -10,6 +10,7 @@ import { type OuterRecord; JSON = OuterRecord } "../Models/OuterRecord";
 import { type ReservedWordModel; JSON = ReservedWordModel } "../Models/ReservedWordModel";
 import { type TestHyphenatedEnumRequest; JSON = TestHyphenatedEnumRequest } "../Models/TestHyphenatedEnumRequest";
 import { type TestNumericEnumRequest; JSON = TestNumericEnumRequest } "../Models/TestNumericEnumRequest";
+import { type TestOneOfVariantRequest; JSON = TestOneOfVariantRequest } "../Models/TestOneOfVariantRequest";
 
 module {
     // Management Canister interface for HTTP outcalls
@@ -264,6 +265,73 @@ module {
         }
     };
 
+    /// Test oneOf discriminated union (similar to Yamaha volume parameter)
+    public func testOneOfVariant(config : Config__, testOneOfVariantRequest : TestOneOfVariantRequest) : async* TestOneOfVariantRequest {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/test-oneof-variant";
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #post;
+            headers;
+            body = do ? {
+                let jsonValue = TestOneOfVariantRequest.toJSON(testOneOfVariantRequest);
+                let candidBlob = to_candid(jsonValue);
+                let #ok(jsonText) = JSON.toText(candidBlob, [], null) else throw Error.reject("Failed to serialize to JSON");
+                Text.encodeUtf8(jsonText)
+            };
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?TestOneOfVariantRequest.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (TestOneOfVariantRequest.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to TestOneOfVariantRequest");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
     /// Test reserved word field names
     public func testReservedWords(config : Config__, reservedWordModel : ReservedWordModel) : async* ReservedWordModel {
         let {baseUrl; accessToken; cycles} = config;
@@ -403,6 +471,7 @@ module {
         testEscapedFields;
         testHyphenatedEnum;
         testNumericEnum;
+        testOneOfVariant;
         testReservedWords;
         testTransitiveEnum;
     };
@@ -421,6 +490,11 @@ module {
         /// Test numeric enum values
         public func testNumericEnum(testNumericEnumRequest : TestNumericEnumRequest) : async TestNumericEnumRequest {
             await* operations__.testNumericEnum(config, testNumericEnumRequest)
+        };
+
+        /// Test oneOf discriminated union (similar to Yamaha volume parameter)
+        public func testOneOfVariant(testOneOfVariantRequest : TestOneOfVariantRequest) : async TestOneOfVariantRequest {
+            await* operations__.testOneOfVariant(config, testOneOfVariantRequest)
         };
 
         /// Test reserved word field names

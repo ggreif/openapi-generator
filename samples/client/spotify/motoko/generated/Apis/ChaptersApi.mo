@@ -1,0 +1,475 @@
+// ChaptersApi.mo
+
+import Text "mo:core/Text";
+import Int "mo:core/Int";
+import Array "mo:core/Array";
+import Error "mo:core/Error";
+import { JSON } "mo:serde";
+import { type ChapterObject; JSON = ChapterObject } "../Models/ChapterObject";
+import { type GetAnAlbum401Response; JSON = GetAnAlbum401Response } "../Models/GetAnAlbum401Response";
+import { type GetSeveralChapters200Response; JSON = GetSeveralChapters200Response } "../Models/GetSeveralChapters200Response";
+import { type PagingSimplifiedChapterObject; JSON = PagingSimplifiedChapterObject } "../Models/PagingSimplifiedChapterObject";
+
+module {
+    // Management Canister interface for HTTP outcalls
+    // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
+    type HttpHeader = {
+        name : Text;
+        value : Text;
+    };
+
+    type HttpMethod = {
+        #get;
+        #head;
+        #post;
+        // TODO: IC HTTP outcalls currently only support GET, HEAD, and POST.
+        //   PUT and DELETE methods are not yet supported by the management canister.
+        //   Once support is added, uncomment these:
+        // #put;
+        // #delete;
+    };
+
+    type CanisterHttpRequestArgument = {
+        url : Text;
+        max_response_bytes : ?Nat64;
+        method : HttpMethod;
+        headers : [HttpHeader];
+        body : ?Blob;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+        is_replicated : ?Bool;
+    };
+
+    type CanisterHttpResponsePayload = {
+        status : Nat;
+        headers : [HttpHeader];
+        body : Blob;
+    };
+
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
+
+    type Config__ = {
+        baseUrl : Text;
+        accessToken : ?Text;
+        max_response_bytes : ?Nat64;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+        is_replicated : ?Bool;
+        cycles : Nat;
+    };
+
+    /// Get a Chapter 
+    /// Get Spotify catalog information for a single audiobook chapter. Chapters are only available within the US, UK, Canada, Ireland, New Zealand and Australia markets. 
+    public func getAChapter(config : Config__, id : Text, market : Text) : async* ChapterObject {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/chapters/{id}"
+            |> Text.replace(_, #text "{id}", id)
+            # "?" # "market=" # market;
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?ChapterObject.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (ChapterObject.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to ChapterObject");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+            // Try parsing 401 response as GetAnAlbum401Response
+            if (response.status == 401) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 401: Bad or expired token. This can happen if the user revoked a token or the access token has expired. You should re-authenticate the user. " # errorDetail);
+            };
+            // Try parsing 403 response as GetAnAlbum401Response
+            if (response.status == 403) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 403: Bad OAuth request (wrong consumer key, bad nonce, expired timestamp...). Unfortunately, re-authenticating the user won&#39;t help here. " # errorDetail);
+            };
+            // Try parsing 429 response as GetAnAlbum401Response
+            if (response.status == 429) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 429: The app has exceeded its rate limits. " # errorDetail);
+            };
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+    /// Get Audiobook Chapters 
+    /// Get Spotify catalog information about an audiobook's chapters. Audiobooks are only available within the US, UK, Canada, Ireland, New Zealand and Australia markets. 
+    public func getAudiobookChapters(config : Config__, id : Text, market : Text, limit : Int, offset : Int) : async* PagingSimplifiedChapterObject {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/audiobooks/{id}/chapters"
+            |> Text.replace(_, #text "{id}", id)
+            # "?" # "market=" # market # "&" # "limit=" # Int.toText(limit) # "&" # "offset=" # Int.toText(offset);
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?PagingSimplifiedChapterObject.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (PagingSimplifiedChapterObject.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to PagingSimplifiedChapterObject");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+            // Try parsing 401 response as GetAnAlbum401Response
+            if (response.status == 401) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 401: Bad or expired token. This can happen if the user revoked a token or the access token has expired. You should re-authenticate the user. " # errorDetail);
+            };
+            // Try parsing 403 response as GetAnAlbum401Response
+            if (response.status == 403) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 403: Bad OAuth request (wrong consumer key, bad nonce, expired timestamp...). Unfortunately, re-authenticating the user won&#39;t help here. " # errorDetail);
+            };
+            // Try parsing 429 response as GetAnAlbum401Response
+            if (response.status == 429) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 429: The app has exceeded its rate limits. " # errorDetail);
+            };
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+    /// Get Several Chapters 
+    /// Get Spotify catalog information for several audiobook chapters identified by their Spotify IDs. Chapters are only available within the US, UK, Canada, Ireland, New Zealand and Australia markets. 
+    public func getSeveralChapters(config : Config__, ids : Text, market : Text) : async* GetSeveralChapters200Response {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/chapters"
+            # "?" # "ids=" # ids # "&" # "market=" # market;
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?GetSeveralChapters200Response.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (GetSeveralChapters200Response.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to GetSeveralChapters200Response");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+            // Try parsing 401 response as GetAnAlbum401Response
+            if (response.status == 401) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 401: Bad or expired token. This can happen if the user revoked a token or the access token has expired. You should re-authenticate the user. " # errorDetail);
+            };
+            // Try parsing 403 response as GetAnAlbum401Response
+            if (response.status == 403) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 403: Bad OAuth request (wrong consumer key, bad nonce, expired timestamp...). Unfortunately, re-authenticating the user won&#39;t help here. " # errorDetail);
+            };
+            // Try parsing 429 response as GetAnAlbum401Response
+            if (response.status == 429) {
+                let errorDetail = if (responseText != "") {
+                    switch (JSON.fromText(responseText, null)) {
+                        case (#ok(blob)) {
+                            let parsedJson : ?GetAnAlbum401Response.JSON = from_candid(blob);
+                            switch (parsedJson) {
+                                case (?jsonValue) {
+                                    switch (GetAnAlbum401Response.fromJSON(jsonValue)) {
+                                        case (?err) " - " # debug_show(err);
+                                        case null " - " # responseText;
+                                    }
+                                };
+                                case null " - " # responseText;
+                            };
+                        };
+                        case (#err(_)) " - " # responseText;
+                    };
+                } else { "" };
+                throw Error.reject("HTTP 429: The app has exceeded its rate limits. " # errorDetail);
+            };
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+
+    let operations__ = {
+        getAChapter;
+        getAudiobookChapters;
+        getSeveralChapters;
+    };
+
+    public module class ChaptersApi(config : Config__) {
+        /// Get a Chapter 
+        /// Get Spotify catalog information for a single audiobook chapter. Chapters are only available within the US, UK, Canada, Ireland, New Zealand and Australia markets. 
+        public func getAChapter(id : Text, market : Text) : async ChapterObject {
+            await* operations__.getAChapter(config, id, market)
+        };
+
+        /// Get Audiobook Chapters 
+        /// Get Spotify catalog information about an audiobook's chapters. Audiobooks are only available within the US, UK, Canada, Ireland, New Zealand and Australia markets. 
+        public func getAudiobookChapters(id : Text, market : Text, limit : Int, offset : Int) : async PagingSimplifiedChapterObject {
+            await* operations__.getAudiobookChapters(config, id, market, limit, offset)
+        };
+
+        /// Get Several Chapters 
+        /// Get Spotify catalog information for several audiobook chapters identified by their Spotify IDs. Chapters are only available within the US, UK, Canada, Ireland, New Zealand and Australia markets. 
+        public func getSeveralChapters(ids : Text, market : Text) : async GetSeveralChapters200Response {
+            await* operations__.getSeveralChapters(config, ids, market)
+        };
+
+    }
+}

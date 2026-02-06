@@ -1,5 +1,13 @@
 # Enum Serialization: The Janus Types Solution
 
+This document describes the Janus Types approach for handling OpenAPI enums and oneOf discriminated unions in the Motoko generator. The solution provides type-safe bidirectional conversion between JSON representations and user-facing Motoko variant types.
+
+**Current Support:**
+- ✅ String enums with special characters (`"published!"`, `"in-progress"`)
+- ✅ Numeric enums (HTTP status codes, etc.)
+- ✅ OneOf discriminated unions (mixed types, inline enums)
+- ✅ Nat type restriction for integers with `minimum >= 0`
+
 ## Problem Statement
 
 When implementing OpenAPI enum support for the Motoko generator, we encountered a fundamental type system impedance mismatch between OpenAPI's JSON representation and Motoko's Candid-based type system.
@@ -10,14 +18,14 @@ When implementing OpenAPI enum support for the Motoko generator, we encountered 
 - Represented as JSON strings: `"published!"`, `"in-progress"`, `"archived-2023"`
 - May contain special characters (hyphens, exclamation marks, numbers)
 
-**Motoko Variants:**
-- Type-safe enums: `#published`, `#in_progress`, `#archived_2023`
+**Motoko User-Facing Variants:**
+- Type-safe enums for application code: `#published`, `#in_progress`, `#archived_2023`
 - Identifiers must be valid Motoko syntax (underscores, no special chars)
 
 **Current Serialization Flow:**
 ```
-Motoko variant → to_candid → Candid blob → JSON.toText → JSON object
-#published      →            variant      →              {"published": null}
+User-facing variant → to_candid → Candid blob → JSON.toText → JSON object
+#published          →            variant      →              {"published": null}
 ```
 **Expected:** `"published!"` (OpenAPI string)
 **Actual:** `{"published": null}` (Candid variant object)
@@ -62,7 +70,7 @@ let result : ?GetEnumStatus200Response = from_candid(blob);
 ```motoko
 // Generated Models/PostStatus.mo
 module {
-    // Motoko-facing type: type-safe variants for application code
+    // User-facing type: type-safe variants for application code
     public type PostStatus = {
         #in_progress;
         #published;
@@ -71,11 +79,11 @@ module {
 
     // JSON sub-module: everything needed for JSON serialization
     public module JSON {
-        // JSON-facing Motoko type: mirrors JSON structure (string enum → Text)
+        // JSON-facing type: mirrors JSON structure (string enum → Text)
         // Named "JSON" to avoid shadowing the outer PostStatus type
         public type JSON = Text;
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert user-facing type to JSON-facing type
         public func toJSON(status : PostStatus) : JSON =
             switch (status) {
                 case (#in_progress) "in-progress";
@@ -83,7 +91,7 @@ module {
                 case (#archived_2023) "archived-2023";
             };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing type to user-facing type
         public func fromJSON(json : JSON) : ?PostStatus =
             switch (json) {
                 case "in-progress" ?#in_progress;
@@ -101,25 +109,25 @@ module {
 import { type PostStatus; JSON = PostStatus } "./PostStatus";
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type GetEnumStatus200Response = {
         status : PostStatus;
     };
 
     // JSON sub-module
     public module JSON {
-        // JSON-facing Motoko type: what serde will serialize (mirrors JSON structure)
+        // JSON-facing type: what serde will serialize (mirrors JSON structure)
         // Named "JSON" to avoid shadowing the outer GetEnumStatus200Response type
         public type JSON = {
             status : PostStatus.JSON;  // This is Text (from PostStatus's JSON sub-module)
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert user-facing type to JSON-facing type
         public func toJSON(response : GetEnumStatus200Response) : JSON = {
             status = PostStatus.toJSON(response.status);
         };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing type to user-facing type
         public func fromJSON(json : JSON) : ?GetEnumStatus200Response {
             let ?status = PostStatus.fromJSON(json.status) else return null;
             ?{ status }
@@ -134,10 +142,10 @@ module {
 import { type PostStatus; JSON = PostStatus } "./PostStatus";
 
 // Now you can use:
-// - PostStatus (the Motoko-facing variant type: #published)
-// - PostStatus.JSON (the JSON-facing Motoko type: Text, from JSON sub-module)
-// - PostStatus.toJSON(status) (convert Motoko-facing → JSON-facing, from JSON sub-module)
-// - PostStatus.fromJSON(jsonStatus) (convert JSON-facing → Motoko-facing)
+// - PostStatus (the user-facing variant type: #published)
+// - PostStatus.JSON (the JSON-facing type: Text, from JSON sub-module)
+// - PostStatus.toJSON(status) (convert user-facing → JSON-facing, from JSON sub-module)
+// - PostStatus.fromJSON(jsonStatus) (convert JSON-facing → user-facing)
 
 // With multiple models, rename each JSON sub-module:
 import { type PostStatus; JSON = PostStatus } "./PostStatus";
@@ -152,9 +160,9 @@ import { JSON } "mo:serde";
 import { type GetEnumStatus200Response; JSON = GetEnumStatus200Response } "../Models/GetEnumStatus200Response";
 
 // Now you can use:
-// - GetEnumStatus200Response (the Motoko-facing type for application code)
-// - GetEnumStatus200Response.JSON (the JSON-facing Motoko type)
-// - GetEnumStatus200Response.fromJSON() (convert JSON-facing Motoko type → Motoko-facing type)
+// - GetEnumStatus200Response (the user-facing type for application code)
+// - GetEnumStatus200Response.JSON (the JSON-facing type)
+// - GetEnumStatus200Response.fromJSON() (convert JSON-facing type → user-facing type)
 // - JSON.fromText() (from serde, parses JSON text → Candid blob)
 ```
 
@@ -178,38 +186,39 @@ public func getEnumStatus() : async GetEnumStatus200Response {
         else throw Error.reject("Failed to deserialize JSON");
     // jsonResponse is now: { status = "published!" } (Motoko Text value)
 
-    // Step 3: Convert JSON-facing Motoko type to Motoko-facing type
+    // Step 3: Convert JSON-facing type to user-facing type
     // This is pure Motoko type conversion (no serde involved)
     switch (GetEnumStatus200Response.fromJSON(jsonResponse)) {
-        case (?motokoResponse) motokoResponse;
-        // motokoResponse is now: { status = #published } (Motoko variant)
-        case null throw Error.reject("Failed to convert between Motoko types");
+        case (?userResponse) userResponse;
+        // userResponse is now: { status = #published } (user-facing variant)
+        case null throw Error.reject("Failed to convert between types");
     }
 }
 ```
 
 **Why This Works Without Serde Modifications:**
 
-The key is **separation of concerns** - model files handle Motoko type conversions, API code handles JSON/Candid:
+The key is **separation of concerns** - model files handle type conversions, API code handles JSON/Candid:
 
 **In Model Files:**
-- Define two Motoko types: Motoko-facing (`#published`) and JSON-facing (`"published!"`)
-- Provide conversion functions between these Motoko types
+- Define two types: user-facing (`#published`) and JSON-facing (`"published!"`)
+- Provide conversion functions between these types
 - No JSON or serde involvement at all
 
 **In API Code:**
 1. `JSON.fromText` (from serde) parses JSON `{"status": "published!"}` into Candid blob
 2. `from_candid` with type annotation `: ?GetEnumStatus200Response.JSON` validates the blob as `record { status : text }`
-3. Result is a JSON-facing **Motoko value**: `{ status = "published!" }`
-4. `GetEnumStatus200Response.fromJSON()` converts to Motoko-facing value: `{ status = #published }`
+3. Result is a JSON-facing value: `{ status = "published!" }`
+4. `GetEnumStatus200Response.fromJSON()` converts to user-facing value: `{ status = #published }`
 
-The JSON-facing Motoko type mirrors JSON structure so serde produces correct output, but it's still just Motoko!
+The JSON-facing type mirrors JSON structure so serde produces correct output, but it's still just Motoko!
 
 **Benefits:**
 - ✅ **Works with existing tooling**: Standard moc compiler and serde library
 - ✅ **Clean organization**: JSON types in sub-modules, clear separation of concerns
 - ✅ **Type safety**: All conversions are explicit and type-checked at compile time
 - ✅ **Composable**: Types naturally compose (nested enums, arrays, optionals all work)
+- ✅ **User-friendly**: Application code works with idiomatic Motoko variants
 - ✅ **Implementable immediately**: No waiting for compiler or library changes
 
 **Generator Strategy:**
@@ -261,7 +270,46 @@ With parallel type hierarchies, `renameKeys` is simplified to **only handle fiel
    }
    ```
 
-3. **Arrays of Enums**:
+3. **OneOf Types** (discriminated unions):
+   ```motoko
+   // OpenAPI: oneOf with multiple schemas or inline enums
+   // Example: { oneOf: [{ type: "integer", minimum: 0 }, { enum: ["up", "down"] }] }
+   public type VolumeParameter = {
+       #nat : Nat;      // Integer with minimum >= 0
+       #up;             // Inline enum expanded to unit variants
+       #down;
+   };
+   public module JSON {
+       // Both Motoko-facing and JSON-facing use variants
+       // Supports mixed types: Nat (from minimum >= 0), strings, etc.
+       public type JSON = {
+           #nat : Int;  // JSON sends Int, Motoko converts to Nat
+           #up;
+           #down;
+       };
+       public func toJSON(param : VolumeParameter) : JSON =
+           switch (param) {
+               case (#nat(n)) #nat(n);  // Nat is subtype of Int
+               case (#up) #up;
+               case (#down) #down;
+           };
+       public func fromJSON(json : JSON) : ?VolumeParameter {
+           switch (json) {
+               case (#nat(i)) if (i >= 0) ?#nat(Int.abs(i)) else null;
+               case (#up) ?#up;
+               case (#down) ?#down;
+           }
+       };
+   }
+   ```
+
+   **OneOf Implementation Details:**
+   - Inline enums are expanded into multiple unit variants
+   - Integer types with `minimum >= 0` become `Nat` variants
+   - Supports mixed types (integers, strings, objects)
+   - JSON-facing type uses variants (not Text/Int like simple enums)
+
+4. **Arrays of Enums**:
    ```motoko
    // OpenAPI: items: { $ref: '#/components/schemas/PostStatus' }
    import { type PostStatus; PS = PostStatus } "./PostStatus";
@@ -281,7 +329,7 @@ With parallel type hierarchies, `renameKeys` is simplified to **only handle fiel
    }
    ```
 
-4. **Optional Fields** (OpenAPI `required: false`):
+5. **Optional Fields** (OpenAPI `required: false`):
    ```motoko
    // These map to Motoko ?T as before - no special handling needed
    public type User = {
@@ -314,8 +362,8 @@ With parallel type hierarchies, `renameKeys` is simplified to **only handle fiel
 - Clean, type-safe code with no runtime surprises
 
 ### 2. Solves Both Directions
-- **Deserialization:** JSON strings → JSON-facing types → Motoko variants
-- **Serialization:** Motoko variants → JSON-facing types → JSON strings
+- **Deserialization:** JSON strings → JSON-facing types → user-facing variants
+- **Serialization:** User-facing variants → JSON-facing types → JSON strings
 - Bidirectional with explicit, type-checked conversions
 
 ### 3. Leverages Existing Patterns
@@ -373,11 +421,12 @@ public module JSON {
 
 The **Janus Types** approach elegantly solves the OpenAPI enum challenge:
 
-- **Two-faced types:** Each model has both Motoko-facing (variants) and JSON-facing (Text/Int) representations
+- **Two-faced types:** Each model has both user-facing (variants) and JSON-facing (Text/Int) representations
 - **Explicit conversions:** Generated `toJSON/fromJSON` functions provide type-safe bridging
 - **No magic:** All conversions are visible and type-checked at generation time
 - **Works today:** Uses existing moc compiler and serde library
 - **Extensible:** Pattern applies to other type conversion needs (optionals, timestamps, etc.)
+- **OneOf support:** OpenAPI `oneOf` schemas generate as discriminated unions with mixed variant types
 
 This approach bridges the impedance mismatch between OpenAPI's JSON representation and Motoko's type system while maintaining full type safety and requiring no compiler or library changes.
 

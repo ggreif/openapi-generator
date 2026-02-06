@@ -21,17 +21,15 @@ module {
         };
 
         // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : InnerRecordWithEnum) : JSON = {
+        public func toJSON(value : InnerRecordWithEnum) : JSON = { value with
             status = AvailabilityEnum.toJSON(value.status);
-            message = value.message;
         };
 
         // Convert JSON-facing Motoko type to Motoko-facing type
         public func fromJSON(json : JSON) : ?InnerRecordWithEnum {
             let ?status = AvailabilityEnum.fromJSON(json.status) else return null;
-            ?{
+            ?{ json with
                 status;
-                message = json.message;
             }
         };
     }

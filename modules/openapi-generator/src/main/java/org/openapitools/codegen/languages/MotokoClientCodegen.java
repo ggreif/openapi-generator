@@ -467,10 +467,10 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
                     String variantType = oneOfProp.dataType;
                     String jsonType = variantType;  // JSON-facing type (may differ for Nat->Int)
 
-                    // For integer types with minimum >= 0, convert to Nat in Motoko-facing type
+                    // For integer types with minimum >= 0, convert to Nat in user-facing type
                     boolean isUnsigned = Boolean.TRUE.equals(oneOfProp.vendorExtensions.get("x-is-unsigned"));
                     if (isUnsigned || ("Nat".equals(variantType))) {
-                        // Motoko-facing uses Nat, JSON-facing uses Int
+                        // User-facing uses Nat, JSON-facing uses Int
                         variantType = "Nat";
                         jsonType = "Int";
                         isUnsigned = true;

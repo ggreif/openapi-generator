@@ -17,7 +17,7 @@ import Int "mo:core/Int";
 /// Enum values: {{#allowableValues}}{{#enumVars}}#{{name}}{{^-last}}, {{/-last}}{{/enumVars}}{{/allowableValues}}
 
 module {
-    // Motoko-facing type: type-safe variants for application code
+    // User-facing type: type-safe variants for application code
     public type {{classname}} = {
 {{#allowableValues}}
 {{#enumVars}}
@@ -35,7 +35,7 @@ module {
         // Named "JSON" to avoid shadowing the outer {{classname}} type
         public type JSON = {{dataType}};
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : {{classname}}) : JSON =
             switch (value) {
 {{#allowableValues}}
@@ -45,7 +45,7 @@ module {
 {{/allowableValues}}
             };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?{{classname}} =
             switch (json) {
 {{#allowableValues}}
@@ -66,7 +66,7 @@ module {
 {{/description}}
 
 module {
-    // Motoko-facing type: discriminated union (oneOf)
+    // User-facing type: discriminated union (oneOf)
     public type {{classname}} = {
 {{#vendorExtensions.oneOfVariants}}
         {{#hasType}}#{{name}} : {{dataType}}{{/hasType}}{{^hasType}}#{{name}}{{/hasType}};
@@ -83,7 +83,7 @@ module {
 {{/vendorExtensions.oneOfVariants}}
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : {{classname}}) : JSON =
             switch (value) {
 {{#vendorExtensions.oneOfVariants}}
@@ -91,7 +91,7 @@ module {
 {{/vendorExtensions.oneOfVariants}}
             };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?{{classname}} =
             switch (json) {
 {{#vendorExtensions.oneOfVariants}}
@@ -108,7 +108,7 @@ module {
 {{/description}}
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type {{classname}} = {
 {{#vars}}
         {{#description}}
@@ -128,7 +128,7 @@ module {
 {{/vars}}
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : {{classname}}) : JSON = {{#vendorExtensions.xNoEnumFields}}value{{/vendorExtensions.xNoEnumFields}}{{^vendorExtensions.xNoEnumFields}}{{#vendorExtensions.xHasPartialTransform}}{ value with
 {{#vars}}
 {{#isEnumRef}}
@@ -146,7 +146,7 @@ module {
 {{/vars}}
         }{{/vendorExtensions.xHasPartialTransform}}{{/vendorExtensions.xNoEnumFields}};
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?{{classname}} {{#vendorExtensions.xNoEnumFields}}= ?json{{/vendorExtensions.xNoEnumFields}}{{^vendorExtensions.xNoEnumFields}}{{#vendorExtensions.xHasPartialTransform}}{
 {{#vars}}
 {{#required}}
