@@ -6,6 +6,7 @@ import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
 import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
+import { type SetPlaybackPlaybackParameter; JSON = SetPlaybackPlaybackParameter } "../Models/SetPlaybackPlaybackParameter";
 
 module {
     type Config__ = {
@@ -22,10 +23,10 @@ module {
 
     /// Control playback
     /// Controls playback and transport functions
-    public func setPlayback(config : Config__, playback : Text) : async* Any {
+    public func setPlayback(config : Config__, playback : SetPlaybackPlaybackParameter) : async* Any {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/netusb/setPlayback"
-            # "?" # "playback=" # (switch (playback) { case (#stop) stop; case (#play) play; case (#pause) pause; case (#previous) previous; case (#next) next; case (#fast_reverse_start) fast_reverse_start; case (#fast_reverse_end) fast_reverse_end; case (#fast_forward_start) fast_forward_start; case (#fast_forward_end) fast_forward_end; });
+            # "?" # "playback=" # SetPlaybackPlaybackParameter.toJSON(playback);
 
         let baseHeaders = [
             { name = "Content-Type"; value = "application/json; charset=utf-8" }
@@ -205,7 +206,7 @@ module {
     public module class TransportApi(config : Config__) {
         /// Control playback
         /// Controls playback and transport functions
-        public func setPlayback(playback : Text) : async Any {
+        public func setPlayback(playback : SetPlaybackPlaybackParameter) : async Any {
             await* operations__.setPlayback(config, playback)
         };
 

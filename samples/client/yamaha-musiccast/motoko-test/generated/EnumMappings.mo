@@ -8,4 +8,14 @@
 // These are used by serde's renameKeys option during JSON serialization.
 
 module {
+    // Mappings for SetPowerPowerParameter enum
+    public let SetPowerPowerParameterOptions = {
+        encode = [
+            ("true_", "true")
+        ];
+        decode = [
+            ("true", "true_")
+        ];
+    };
+
 }

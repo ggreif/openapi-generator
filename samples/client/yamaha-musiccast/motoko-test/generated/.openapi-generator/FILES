@@ -5,6 +5,14 @@ Apis/TransportApi.mo
 Apis/TunerApi.mo
 Apis/ZoneApi.mo
 EnumMappings.mo
+Models/RecallTunerPresetBandParameter.mo
+Models/SetInputInputParameter.mo
+Models/SetInputModeParameter.mo
+Models/SetPlaybackPlaybackParameter.mo
+Models/SetPowerPowerParameter.mo
+Models/SetTunerFreqTuningParameter.mo
 Models/SetVolumeVolumeParameter.mo
+Models/SetVolumeVolumeParameterOneOf.mo
+Models/SwitchTunerPresetDirParameter.mo
 README.md
 mops.toml

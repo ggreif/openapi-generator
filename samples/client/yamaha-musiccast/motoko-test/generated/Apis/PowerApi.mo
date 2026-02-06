@@ -9,6 +9,7 @@ import { JSON } "mo:serde";
 //        type error [M0114], object pattern cannot consume actor type
 //import { type http_request_args; type http_request_result; type http_header; http_request } "ic:aaaaa-aa";
 import Mgnt = "ic:aaaaa-aa";
+import { type SetPowerPowerParameter; JSON = SetPowerPowerParameter } "../Models/SetPowerPowerParameter";
 
 module {
 
@@ -99,11 +100,11 @@ module {
 
     /// Set power status
     /// Turn the zone on, put it in standby, or toggle power
-    public func setPower(config : Config__, zone : Text, power : Text) : async* Any {
+    public func setPower(config : Config__, zone : Text, power : SetPowerPowerParameter) : async* Any {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/{zone}/setPower"
             |> Text.replace(_, #text "{zone}", zone)
-            # "?" # "power=" # power;
+            # "?" # "power=" # SetPowerPowerParameter.toJSON(power);
 
         let baseHeaders = [
             { name = "Content-Type"; value = "application/json; charset=utf-8" }
@@ -172,7 +173,7 @@ module {
 
         /// Set power status
         /// Turn the zone on, put it in standby, or toggle power
-        public func setPower(zone : Text, power : Text) : async Any {
+        public func setPower(zone : Text, power : SetPowerPowerParameter) : async Any {
             await* operations__.setPower(config, zone, power)
         };
 

@@ -105,6 +105,10 @@ public class MotokoClientCodegen extends DefaultCodegen implements CodegenConfig
 
         cliOptions.add(CliOption.newString(PROJECT_NAME, "Project name for generated code"));
         cliOptions.add(CliOption.newBoolean(USE_DFX, "Generate code for dfx with ic:aaaaa-aa imports", useDfx));
+
+        // Enable inline enum resolution to create model files for inline enum parameters
+        // This ensures type-safe enum variants instead of raw Text types
+        inlineSchemaOption.put("RESOLVE_INLINE_ENUMS", "true");
     }
 
     @Override

@@ -5,6 +5,9 @@ import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
+//import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
+import { type SetInputInputParameter; JSON = SetInputInputParameter } "../Models/SetInputInputParameter";
+import { type SetInputModeParameter; JSON = SetInputModeParameter } "../Models/SetInputModeParameter";
 import { type SetVolumeVolumeParameter; JSON = SetVolumeVolumeParameter } "../Models/SetVolumeVolumeParameter";
 //import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
 // FIXME: destructuring on `actor` types is not implemented yet
@@ -220,11 +223,11 @@ module {
 
     /// Set input source
     /// Sets the input source for the zone
-    public func setInput(config : Config__, zone : Text, input : Text, mode : Text) : async* Any {
+    public func setInput(config : Config__, zone : Text, input : SetInputInputParameter, mode : SetInputModeParameter) : async* Any {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/{zone}/setInput"
             |> Text.replace(_, #text "{zone}", zone)
-            # "?" # "input=" # (switch (input) { case (#net_radio) net_radio; case (#napster) napster; case (#spotify) spotify; case (#juke) juke; case (#qobuz) qobuz; case (#tidal) tidal; case (#deezer) deezer; case (#server) server; case (#bluetooth) bluetooth; case (#airplay) airplay; case (#mc_link) mc_link; case (#usb) usb; }) # "&" # "mode=" # (switch (mode) { case (#autoplay) autoplay; case (#autoplay_disabled) autoplay_disabled; });
+            # "?" # "input=" # SetInputInputParameter.toJSON(input) # "&" # "mode=" # SetInputModeParameter.toJSON(mode);
 
         let baseHeaders = [
             { name = "Content-Type"; value = "application/json; charset=utf-8" }
@@ -340,7 +343,7 @@ module {
 
     /// Set sleep timer
     /// Sets the sleep timer in minutes (0 to cancel)
-    public func setSleep(config : Config__, zone : Text, sleep : Int) : async* Any {
+    public func setSleep(config : Config__, zone : Text, sleep : Nat) : async* Any {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/{zone}/setSleep"
             |> Text.replace(_, #text "{zone}", zone)
@@ -460,11 +463,11 @@ module {
 
     /// Set volume
     /// Sets the volume level directly or incrementally
-    public func setVolume(config : Config__, zone : Text, volume : SetVolumeVolumeParameter, step : Int) : async* Any {
+    public func setVolume(config : Config__, zone : Text, volume : SetVolumeVolumeParameter, step : Nat) : async* Any {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/{zone}/setVolume"
             |> Text.replace(_, #text "{zone}", zone)
-            # "?" # "volume=" # debug_show(volume) # "&" # "step=" # Int.toText(step);
+            # "?" # "volume=" # SetVolumeVolumeParameter.toText(volume) # "&" # "step=" # Int.toText(step);
 
         let baseHeaders = [
             { name = "Content-Type"; value = "application/json; charset=utf-8" }
@@ -551,7 +554,7 @@ module {
 
         /// Set input source
         /// Sets the input source for the zone
-        public func setInput(zone : Text, input : Text, mode : Text) : async Any {
+        public func setInput(zone : Text, input : SetInputInputParameter, mode : SetInputModeParameter) : async Any {
             await* operations__.setInput(config, zone, input, mode)
         };
 
@@ -563,7 +566,7 @@ module {
 
         /// Set sleep timer
         /// Sets the sleep timer in minutes (0 to cancel)
-        public func setSleep(zone : Text, sleep : Int) : async Any {
+        public func setSleep(zone : Text, sleep : Nat) : async Any {
             await* operations__.setSleep(config, zone, sleep)
         };
 
@@ -575,7 +578,7 @@ module {
 
         /// Set volume
         /// Sets the volume level directly or incrementally
-        public func setVolume(zone : Text, volume : SetVolumeVolumeParameter, step : Int) : async Any {
+        public func setVolume(zone : Text, volume : SetVolumeVolumeParameter, step : Nat) : async Any {
             await* operations__.setVolume(config, zone, volume, step)
         };
 
