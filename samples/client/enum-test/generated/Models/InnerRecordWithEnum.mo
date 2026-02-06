@@ -5,7 +5,7 @@ import { type AvailabilityEnum; JSON = AvailabilityEnum } "./AvailabilityEnum";
 /// Inner record containing an enum field
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type InnerRecordWithEnum = {
         status : AvailabilityEnum;
         message : ?Text;
@@ -20,12 +20,12 @@ module {
             message : ?Text;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : InnerRecordWithEnum) : JSON = { value with
             status = AvailabilityEnum.toJSON(value.status);
         };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?InnerRecordWithEnum {
             let ?status = AvailabilityEnum.fromJSON(json.status) else return null;
             ?{ json with

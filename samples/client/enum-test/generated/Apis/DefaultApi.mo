@@ -6,11 +6,15 @@ import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
 import { type HttpHeader; JSON = HttpHeader } "../Models/HttpHeader";
+import { type MixedOneOf; JSON = MixedOneOf } "../Models/MixedOneOf";
 import { type OuterRecord; JSON = OuterRecord } "../Models/OuterRecord";
 import { type ReservedWordModel; JSON = ReservedWordModel } "../Models/ReservedWordModel";
+import { type SetVolume200Response; JSON = SetVolume200Response } "../Models/SetVolume200Response";
 import { type TestHyphenatedEnumRequest; JSON = TestHyphenatedEnumRequest } "../Models/TestHyphenatedEnumRequest";
+import { type TestMixedOneOf200Response; JSON = TestMixedOneOf200Response } "../Models/TestMixedOneOf200Response";
 import { type TestNumericEnumRequest; JSON = TestNumericEnumRequest } "../Models/TestNumericEnumRequest";
 import { type TestOneOfVariantRequest; JSON = TestOneOfVariantRequest } "../Models/TestOneOfVariantRequest";
+import { type VolumeParameter; JSON = VolumeParameter } "../Models/VolumeParameter";
 
 module {
     // Management Canister interface for HTTP outcalls
@@ -62,6 +66,69 @@ module {
         };
         is_replicated : ?Bool;
         cycles : Nat;
+    };
+
+    /// Set volume with oneOf query parameter
+    public func setVolume(config : Config__, volume : VolumeParameter, zone : Text) : async* SetVolume200Response {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/set-volume"
+            # "?" # "volume=" # VolumeParameter.toText(volume) # "&" # "zone=" # zone;
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?SetVolume200Response.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (SetVolume200Response.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to SetVolume200Response");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
     };
 
     /// Test record fields with hyphens
@@ -180,6 +247,69 @@ module {
                     switch (TestHyphenatedEnumRequest.fromJSON(jsonValue)) {
                         case (?value) value;
                         case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to TestHyphenatedEnumRequest");
+                    }
+                };
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+    /// Test mixed oneOf as query parameter
+    public func testMixedOneOf(config : Config__, value : MixedOneOf) : async* TestMixedOneOf200Response {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/test-mixed-oneof"
+            # "?" # "value=" # MixedOneOf.toText(value);
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?TestMixedOneOf200Response.JSON |>
+            (switch (_) {
+                case (?jsonValue) {
+                    switch (TestMixedOneOf200Response.fromJSON(jsonValue)) {
+                        case (?value) value;
+                        case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to convert response to TestMixedOneOf200Response");
                     }
                 };
                 case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
@@ -468,8 +598,10 @@ module {
 
 
     let operations__ = {
+        setVolume;
         testEscapedFields;
         testHyphenatedEnum;
+        testMixedOneOf;
         testNumericEnum;
         testOneOfVariant;
         testReservedWords;
@@ -477,6 +609,11 @@ module {
     };
 
     public module class DefaultApi(config : Config__) {
+        /// Set volume with oneOf query parameter
+        public func setVolume(volume : VolumeParameter, zone : Text) : async SetVolume200Response {
+            await* operations__.setVolume(config, volume, zone)
+        };
+
         /// Test record fields with hyphens
         public func testEscapedFields(httpHeader : HttpHeader) : async HttpHeader {
             await* operations__.testEscapedFields(config, httpHeader)
@@ -485,6 +622,11 @@ module {
         /// Test hyphenated enum values
         public func testHyphenatedEnum(testHyphenatedEnumRequest : TestHyphenatedEnumRequest) : async TestHyphenatedEnumRequest {
             await* operations__.testHyphenatedEnum(config, testHyphenatedEnumRequest)
+        };
+
+        /// Test mixed oneOf as query parameter
+        public func testMixedOneOf(value : MixedOneOf) : async TestMixedOneOf200Response {
+            await* operations__.testMixedOneOf(config, value)
         };
 
         /// Test numeric enum values

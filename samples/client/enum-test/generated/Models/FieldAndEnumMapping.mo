@@ -7,7 +7,7 @@ import { type HTTPStatusEnum; JSON = HTTPStatusEnum } "./HTTPStatusEnum";
 /// Test model with BOTH field name mapping AND enum value mapping
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type FieldAndEnumMapping = {
         status_code : HTTPStatusEnum;
         availability_status : ?AvailabilityEnum;
@@ -24,13 +24,13 @@ module {
             content_type : ?Text;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : FieldAndEnumMapping) : JSON = { value with
             status_code = HTTPStatusEnum.toJSON(value.status_code);
             availability_status = switch (value.availability_status) { case (?v) ?AvailabilityEnum.toJSON(v); case null null };
         };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?FieldAndEnumMapping {
             let ?status_code = HTTPStatusEnum.fromJSON(json.status_code) else return null;
             ?{ json with

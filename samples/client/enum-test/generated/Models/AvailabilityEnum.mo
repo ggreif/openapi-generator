@@ -4,7 +4,7 @@
 /// Enum values: #available_now, #out_of_stock, #pre_order, #coming_soon
 
 module {
-    // Motoko-facing type: type-safe variants for application code
+    // User-facing type: type-safe variants for application code
     public type AvailabilityEnum = {
         #available_now;
         #out_of_stock;
@@ -18,7 +18,7 @@ module {
         // Named "JSON" to avoid shadowing the outer AvailabilityEnum type
         public type JSON = Text;
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : AvailabilityEnum) : JSON =
             switch (value) {
                 case (#available_now) "Available Now!";
@@ -27,7 +27,7 @@ module {
                 case (#coming_soon) "Coming Soon...";
             };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?AvailabilityEnum =
             switch (json) {
                 case "Available Now!" ?#available_now;

@@ -10,10 +10,13 @@ Models/MixedOneOf.mo
 Models/MixedOneOfOneOf.mo
 Models/OuterRecord.mo
 Models/ReservedWordModel.mo
+Models/SetVolume200Response.mo
 Models/SimpleColorEnum.mo
 Models/TestHyphenatedEnumRequest.mo
+Models/TestMixedOneOf200Response.mo
 Models/TestNumericEnumRequest.mo
 Models/TestOneOfVariantRequest.mo
 Models/VolumeParameter.mo
+Models/VolumeParameterOneOf.mo
 README.md
 mops.toml

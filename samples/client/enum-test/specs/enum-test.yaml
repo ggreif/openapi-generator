@@ -5,6 +5,55 @@ info:
   description: Test API for enum serialization with renameKeys
 
 paths:
+  /set-volume:
+    get:
+      operationId: setVolume
+      summary: Set volume with oneOf query parameter
+      parameters:
+        - name: volume
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/VolumeParameter'
+        - name: zone
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  volume:
+                    $ref: '#/components/schemas/VolumeParameter'
+
+  /test-mixed-oneof:
+    get:
+      operationId: testMixedOneOf
+      summary: Test mixed oneOf as query parameter
+      parameters:
+        - name: value
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/MixedOneOf'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    $ref: '#/components/schemas/MixedOneOf'
+
   /test-hyphenated-enum:
     post:
       operationId: testHyphenatedEnum
