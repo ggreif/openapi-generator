@@ -19,7 +19,7 @@ persistent actor {
     transient let powerApi = PowerApi(apiConfig);
     transient let zoneApi = ZoneApi(apiConfig);
 
-    /// Test sequence: power on, raise volume in 5-increments to 30%, power off
+    /// Test sequence: power on, raise volume to 30% in 5-increments, do 10 down steps, do 3 up steps, power off
     public func testYamahaSequence() : async Text {
         Debug.print("Starting Yamaha MusicCast test sequence");
 
@@ -36,12 +36,28 @@ persistent actor {
         };
         Debug.print("   ✓ Volume raised to 30%");
 
-        // 3. Power off (standby)
-        Debug.print("3. Powering off...");
+        // 3. Do 10 down steps
+        Debug.print("3. Doing 10 down steps...");
+        for (i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].vals()) {
+            Debug.print("   Down step " # Int.toText(i));
+            ignore await zoneApi.setVolume("main", #SetVolumeVolumeParameterOneOf(#down), 0);
+        };
+        Debug.print("   ✓ Completed 10 down steps");
+
+        // 4. Do 3 up steps
+        Debug.print("4. Doing 3 up steps...");
+        for (i in [1, 2, 3].vals()) {
+            Debug.print("   Up step " # Int.toText(i));
+            ignore await zoneApi.setVolume("main", #SetVolumeVolumeParameterOneOf(#up), 0);
+        };
+        Debug.print("   ✓ Completed 3 up steps");
+
+        // 5. Power off (standby)
+        Debug.print("5. Powering off...");
         let _ = await powerApi.setPower("main", #standby);
         Debug.print("   ✓ Power off (standby)");
 
         Debug.print("Test sequence completed successfully!");
-        "SUCCESS: Test sequence completed - powered on, raised volume to 30%, powered off"
+        "SUCCESS: Test sequence completed - raised to 30%, 10 down, 3 up, powered off"
     };
 }
