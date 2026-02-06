@@ -1,10 +1,12 @@
 
+import { type ArtistObjectType; JSON = ArtistObjectType } "./ArtistObjectType";
+
 import { type ExternalUrlObject; JSON = ExternalUrlObject } "./ExternalUrlObject";
 
 // SimplifiedArtistObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type SimplifiedArtistObject = {
         /// Known external URLs for this artist. 
         external_urls : ?ExternalUrlObject;
@@ -14,8 +16,7 @@ module {
         id : ?Text;
         /// The name of the artist. 
         name : ?Text;
-        /// The object type. 
-        type_ : ?Text;
+        type_ : ?ArtistObjectType;
         /// The [Spotify URI](/documentation/web-api/concepts/spotify-uris-ids) for the artist. 
         uri : ?Text;
     };
@@ -29,14 +30,20 @@ module {
             href : ?Text;
             id : ?Text;
             name : ?Text;
-            type_ : ?Text;
+            type_ : ?ArtistObjectType.JSON;
             uri : ?Text;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : SimplifiedArtistObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : SimplifiedArtistObject) : JSON = { value with
+            type_ = do ? { ArtistObjectType.toJSON(value.type_!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?SimplifiedArtistObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?SimplifiedArtistObject {
+            ?{ json with
+                type_ = do ? { ArtistObjectType.fromJSON(json.type_!)! };
+            }
+        };
     }
 }

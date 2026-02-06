@@ -4,7 +4,6 @@ Apis/SystemApi.mo
 Apis/TransportApi.mo
 Apis/TunerApi.mo
 Apis/ZoneApi.mo
-EnumMappings.mo
 Models/RecallTunerPresetBandParameter.mo
 Models/SetInputInputParameter.mo
 Models/SetInputModeParameter.mo

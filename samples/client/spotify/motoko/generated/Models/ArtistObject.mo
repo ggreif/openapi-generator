@@ -1,4 +1,6 @@
 
+import { type ArtistObjectType; JSON = ArtistObjectType } "./ArtistObjectType";
+
 import { type ExternalUrlObject; JSON = ExternalUrlObject } "./ExternalUrlObject";
 
 import { type FollowersObject; JSON = FollowersObject } "./FollowersObject";
@@ -8,7 +10,7 @@ import { type ImageObject; JSON = ImageObject } "./ImageObject";
 // ArtistObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type ArtistObject = {
         /// Known external URLs for this artist. 
         external_urls : ?ExternalUrlObject;
@@ -26,8 +28,7 @@ module {
         name : ?Text;
         /// The popularity of the artist. The value will be between 0 and 100, with 100 being the most popular. The artist's popularity is calculated from the popularity of all the artist's tracks. 
         popularity : ?Int;
-        /// The object type. 
-        type_ : ?Text;
+        type_ : ?ArtistObjectType;
         /// The [Spotify URI](/documentation/web-api/concepts/spotify-uris-ids) for the artist. 
         uri : ?Text;
     };
@@ -45,14 +46,20 @@ module {
             images : ?[ImageObject];
             name : ?Text;
             popularity : ?Int;
-            type_ : ?Text;
+            type_ : ?ArtistObjectType.JSON;
             uri : ?Text;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : ArtistObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : ArtistObject) : JSON = { value with
+            type_ = do ? { ArtistObjectType.toJSON(value.type_!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?ArtistObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?ArtistObject {
+            ?{ json with
+                type_ = do ? { ArtistObjectType.fromJSON(json.type_!)! };
+            }
+        };
     }
 }

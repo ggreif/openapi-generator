@@ -1,11 +1,12 @@
 
+import { type AlbumRestrictionObjectReason; JSON = AlbumRestrictionObjectReason } "./AlbumRestrictionObjectReason";
+
 // AlbumRestrictionObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type AlbumRestrictionObject = {
-        /// The reason for the restriction. Albums may be restricted if the content is not available in a given market, to the user's subscription type, or when the user's account is set to not play explicit content. Additional reasons may be added in the future. 
-        reason : ?Text;
+        reason : ?AlbumRestrictionObjectReason;
     };
 
     // JSON sub-module: everything needed for JSON serialization
@@ -13,13 +14,19 @@ module {
         // JSON-facing Motoko type: mirrors JSON structure
         // Named "JSON" to avoid shadowing the outer AlbumRestrictionObject type
         public type JSON = {
-            reason : ?Text;
+            reason : ?AlbumRestrictionObjectReason.JSON;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : AlbumRestrictionObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : AlbumRestrictionObject) : JSON = {
+            reason = do ? { AlbumRestrictionObjectReason.toJSON(value.reason!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?AlbumRestrictionObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?AlbumRestrictionObject {
+            ?{
+                reason = do ? { AlbumRestrictionObjectReason.fromJSON(json.reason!)! };
+            }
+        };
     }
 }

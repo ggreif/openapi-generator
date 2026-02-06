@@ -10,7 +10,7 @@ import { type ImageObject; JSON = ImageObject } "./ImageObject";
 // PrivateUserObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type PrivateUserObject = {
         /// The country of the user, as set in the user's account profile. An [ISO 3166-1 alpha-2 country code](http://en.wikipedia.org/wiki/ISO_3166-1_alpha-2). _This field is only available when the current user has granted access to the [user-read-private](/documentation/web-api/concepts/scopes/#list-of-scopes) scope._ 
         country : ?Text;
@@ -57,10 +57,10 @@ module {
             uri : ?Text;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : PrivateUserObject) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?PrivateUserObject = ?json;
     }
 }

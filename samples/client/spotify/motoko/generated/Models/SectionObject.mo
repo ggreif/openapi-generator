@@ -1,8 +1,12 @@
 
+import { type SectionObjectMode; JSON = SectionObjectMode } "./SectionObjectMode";
+
+import Int "mo:core/Int";
+
 // SectionObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type SectionObject = {
         /// The starting point (in seconds) of the section.
         start : ?Float;
@@ -20,12 +24,11 @@ module {
         key : ?Int;
         /// The confidence, from 0.0 to 1.0, of the reliability of the key. Songs with many key changes may correspond to low values in this field.
         key_confidence : ?Float;
-        /// Indicates the modality (major or minor) of a section, the type of scale from which its melodic content is derived. This field will contain a 0 for \"minor\", a 1 for \"major\", or a -1 for no result. Note that the major key (e.g. C major) could more likely be confused with the minor key at 3 semitones lower (e.g. A minor) as both keys carry the same pitches.
-        mode : ?Float;
+        mode : ?SectionObjectMode;
         /// The confidence, from 0.0 to 1.0, of the reliability of the `mode`.
         mode_confidence : ?Float;
         /// An estimated time signature. The time signature (meter) is a notational convention to specify how many beats are in each bar (or measure). The time signature ranges from 3 to 7 indicating time signatures of \"3/4\", to \"7/4\".
-        time_signature : ?Int;
+        time_signature : ?Nat;
         /// The confidence, from 0.0 to 1.0, of the reliability of the `time_signature`. Sections with time signature changes may correspond to low values in this field.
         time_signature_confidence : ?Float;
     };
@@ -43,16 +46,23 @@ module {
             tempo_confidence : ?Float;
             key : ?Int;
             key_confidence : ?Float;
-            mode : ?Float;
+            mode : ?SectionObjectMode.JSON;
             mode_confidence : ?Float;
             time_signature : ?Int;
             time_signature_confidence : ?Float;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : SectionObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : SectionObject) : JSON = { value with
+            mode = do ? { SectionObjectMode.toJSON(value.mode!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?SectionObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?SectionObject {
+            ?{ json with
+                mode = do ? { SectionObjectMode.fromJSON(json.mode!)! };
+                time_signature = switch (json.time_signature) { case (?v) if (v < 0) null else ?Int.abs(v); case null null };
+            }
+        };
     }
 }

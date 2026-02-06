@@ -16,12 +16,12 @@ import { type SaveEpisodesUserRequest; JSON = SaveEpisodesUserRequest } "../Mode
 module {
     // Management Canister interface for HTTP outcalls
     // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
-    type HttpHeader = {
+    type http_header = {
         name : Text;
         value : Text;
     };
 
-    type HttpMethod = {
+    type http_method = {
         #get;
         #head;
         #post;
@@ -32,33 +32,33 @@ module {
         // #delete;
     };
 
-    type CanisterHttpRequestArgument = {
+    type http_request_args = {
         url : Text;
         max_response_bytes : ?Nat64;
-        method : HttpMethod;
-        headers : [HttpHeader];
+        method : http_method;
+        headers : [http_header];
         body : ?Blob;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
     };
 
-    type CanisterHttpResponsePayload = {
+    type http_request_result = {
         status : Nat;
-        headers : [HttpHeader];
+        headers : [http_header];
         body : Blob;
     };
 
-    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (http_request_args) -> async http_request_result }).http_request;
 
     type Config__ = {
         baseUrl : Text;
         accessToken : ?Text;
         max_response_bytes : ?Nat64;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
@@ -84,7 +84,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -92,7 +92,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -189,7 +189,7 @@ module {
 
     /// Get Show Episodes 
     /// Get Spotify catalog information about an show’s episodes. Optional parameters can be used to limit the number of episodes returned. 
-    public func getAShowsEpisodes(config : Config__, id : Text, market : Text, limit : Int, offset : Int) : async* PagingSimplifiedEpisodeObject {
+    public func getAShowsEpisodes(config : Config__, id : Text, market : Text, limit : Nat, offset : Int) : async* PagingSimplifiedEpisodeObject {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/shows/{id}/episodes"
             |> Text.replace(_, #text "{id}", id)
@@ -207,7 +207,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -215,7 +215,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -335,7 +335,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -343,7 +343,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -462,7 +462,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -470,7 +470,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -572,7 +572,7 @@ module {
 
     /// Get User's Saved Episodes 
     /// Get a list of the episodes saved in the current Spotify user's library.<br/> This API endpoint is in __beta__ and could change without warning. Please share any feedback that you have, or issues that you discover, in our [developer community forum](https://community.spotify.com/t5/Spotify-for-Developers/bd-p/Spotify_Developer). 
-    public func getUsersSavedEpisodes(config : Config__, market : Text, limit : Int, offset : Int) : async* PagingSavedEpisodeObject {
+    public func getUsersSavedEpisodes(config : Config__, market : Text, limit : Nat, offset : Int) : async* PagingSavedEpisodeObject {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/me/episodes"
             # "?" # "market=" # market # "&" # "limit=" # Int.toText(limit) # "&" # "offset=" # Int.toText(offset);
@@ -589,7 +589,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -597,7 +597,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -716,7 +716,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #delete;
             headers;
@@ -752,7 +752,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -789,7 +789,7 @@ module {
 
         /// Get Show Episodes 
         /// Get Spotify catalog information about an show’s episodes. Optional parameters can be used to limit the number of episodes returned. 
-        public func getAShowsEpisodes(id : Text, market : Text, limit : Int, offset : Int) : async PagingSimplifiedEpisodeObject {
+        public func getAShowsEpisodes(id : Text, market : Text, limit : Nat, offset : Int) : async PagingSimplifiedEpisodeObject {
             await* operations__.getAShowsEpisodes(config, id, market, limit, offset)
         };
 
@@ -807,7 +807,7 @@ module {
 
         /// Get User's Saved Episodes 
         /// Get a list of the episodes saved in the current Spotify user's library.<br/> This API endpoint is in __beta__ and could change without warning. Please share any feedback that you have, or issues that you discover, in our [developer community forum](https://community.spotify.com/t5/Spotify-for-Developers/bd-p/Spotify_Developer). 
-        public func getUsersSavedEpisodes(market : Text, limit : Int, offset : Int) : async PagingSavedEpisodeObject {
+        public func getUsersSavedEpisodes(market : Text, limit : Nat, offset : Int) : async PagingSavedEpisodeObject {
             await* operations__.getUsersSavedEpisodes(config, market, limit, offset)
         };
 

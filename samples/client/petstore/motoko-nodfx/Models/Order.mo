@@ -1,16 +1,17 @@
 
+import { type OrderStatus; JSON = OrderStatus } "./OrderStatus";
+
 // Order.mo
 /// An order for a pets from the pet store
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type Order = {
         id : ?Int;
         petId : ?Int;
         quantity : ?Int;
         shipDate : ?Text;
-        /// Order Status
-        status : ?Text;
+        status : ?OrderStatus;
         complete : ?Bool;
     };
 
@@ -23,14 +24,20 @@ module {
             petId : ?Int;
             quantity : ?Int;
             shipDate : ?Text;
-            status : ?Text;
+            status : ?OrderStatus.JSON;
             complete : ?Bool;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : Order) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : Order) : JSON = { value with
+            status = do ? { OrderStatus.toJSON(value.status!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?Order = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?Order {
+            ?{ json with
+                status = do ? { OrderStatus.fromJSON(json.status!)! };
+            }
+        };
     }
 }

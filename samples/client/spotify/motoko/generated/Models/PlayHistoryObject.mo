@@ -6,7 +6,7 @@ import { type TrackObject; JSON = TrackObject } "./TrackObject";
 // PlayHistoryObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type PlayHistoryObject = {
         /// The track the user listened to.
         track : ?TrackObject;
@@ -21,15 +21,21 @@ module {
         // JSON-facing Motoko type: mirrors JSON structure
         // Named "JSON" to avoid shadowing the outer PlayHistoryObject type
         public type JSON = {
-            track : ?TrackObject;
+            track : ?TrackObject.JSON;
             played_at : ?Text;
             context : ?ContextObject;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : PlayHistoryObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : PlayHistoryObject) : JSON = { value with
+            track = do ? { TrackObject.toJSON(value.track!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?PlayHistoryObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?PlayHistoryObject {
+            ?{ json with
+                track = do ? { TrackObject.fromJSON(json.track!)! };
+            }
+        };
     }
 }

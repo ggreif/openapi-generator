@@ -10,7 +10,7 @@ import { type TrackRestrictionObject; JSON = TrackRestrictionObject } "./TrackRe
 // SimplifiedTrackObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type SimplifiedTrackObject = {
         /// The artists who performed the track. Each artist object includes a link in `href` to more detailed information about the artist.
         artists : ?[SimplifiedArtistObject];
@@ -72,10 +72,10 @@ module {
             is_local : ?Bool;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : SimplifiedTrackObject) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?SimplifiedTrackObject = ?json;
     }
 }

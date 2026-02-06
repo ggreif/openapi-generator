@@ -6,7 +6,7 @@ import { type QueueObjectQueueInner; JSON = QueueObjectQueueInner } "./QueueObje
 // QueueObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type QueueObject = {
         currently_playing : ?QueueObjectCurrentlyPlaying;
         /// The tracks or episodes in the queue. Can be empty.
@@ -18,14 +18,20 @@ module {
         // JSON-facing Motoko type: mirrors JSON structure
         // Named "JSON" to avoid shadowing the outer QueueObject type
         public type JSON = {
-            currently_playing : ?QueueObjectCurrentlyPlaying;
+            currently_playing : ?QueueObjectCurrentlyPlaying.JSON;
             queue : ?[QueueObjectQueueInner];
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : QueueObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : QueueObject) : JSON = { value with
+            currently_playing = do ? { QueueObjectCurrentlyPlaying.toJSON(value.currently_playing!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?QueueObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?QueueObject {
+            ?{ json with
+                currently_playing = do ? { QueueObjectCurrentlyPlaying.fromJSON(json.currently_playing!)! };
+            }
+        };
     }
 }

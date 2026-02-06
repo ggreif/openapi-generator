@@ -1,4 +1,6 @@
 
+import { type AudiobookBaseType; JSON = AudiobookBaseType } "./AudiobookBaseType";
+
 import { type AuthorObject; JSON = AuthorObject } "./AuthorObject";
 
 import { type CopyrightObject; JSON = CopyrightObject } "./CopyrightObject";
@@ -12,7 +14,7 @@ import { type NarratorObject; JSON = NarratorObject } "./NarratorObject";
 // SimplifiedAudiobookObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type SimplifiedAudiobookObject = {
         /// The author(s) for the audiobook. 
         authors : [AuthorObject];
@@ -46,8 +48,7 @@ module {
         narrators : [NarratorObject];
         /// The publisher of the audiobook. 
         publisher : Text;
-        /// The object type. 
-        type_ : Text;
+        type_ : AudiobookBaseType;
         /// The [Spotify URI](/documentation/web-api/concepts/spotify-uris-ids) for the audiobook. 
         uri : Text;
         /// The number of chapters in this audiobook. 
@@ -75,15 +76,22 @@ module {
             name : Text;
             narrators : [NarratorObject];
             publisher : Text;
-            type_ : Text;
+            type_ : AudiobookBaseType.JSON;
             uri : Text;
             total_chapters : Int;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : SimplifiedAudiobookObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : SimplifiedAudiobookObject) : JSON = { value with
+            type_ = AudiobookBaseType.toJSON(value.type_);
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?SimplifiedAudiobookObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?SimplifiedAudiobookObject {
+            let ?type_ = AudiobookBaseType.fromJSON(json.type_) else return null;
+            ?{ json with
+                type_;
+            }
+        };
     }
 }

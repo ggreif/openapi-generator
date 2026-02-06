@@ -4,7 +4,7 @@ import { type ChapterObject; JSON = ChapterObject } "./ChapterObject";
 // GetSeveralChapters200Response.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type GetSeveralChapters200Response = {
         chapters : [ChapterObject];
     };
@@ -17,10 +17,10 @@ module {
             chapters : [ChapterObject];
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : GetSeveralChapters200Response) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?GetSeveralChapters200Response = ?json;
     }
 }

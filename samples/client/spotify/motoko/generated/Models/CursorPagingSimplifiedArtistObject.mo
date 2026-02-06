@@ -6,7 +6,7 @@ import { type CursorObject; JSON = CursorObject } "./CursorObject";
 // CursorPagingSimplifiedArtistObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type CursorPagingSimplifiedArtistObject = {
         /// A link to the Web API endpoint returning the full result of the request.
         href : ?Text;
@@ -34,10 +34,10 @@ module {
             items : ?[ArtistObject];
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : CursorPagingSimplifiedArtistObject) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?CursorPagingSimplifiedArtistObject = ?json;
     }
 }

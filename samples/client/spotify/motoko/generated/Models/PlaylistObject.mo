@@ -10,7 +10,7 @@ import { type PlaylistOwnerObject; JSON = PlaylistOwnerObject } "./PlaylistOwner
 // PlaylistObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type PlaylistObject = {
         /// `true` if the owner allows other users to modify the playlist. 
         collaborative : ?Bool;
@@ -52,7 +52,7 @@ module {
             id : ?Text;
             images : ?[ImageObject];
             name : ?Text;
-            owner : ?PlaylistOwnerObject;
+            owner : ?PlaylistOwnerObject.JSON;
             public_ : ?Bool;
             snapshot_id : ?Text;
             tracks : ?PagingPlaylistTrackObject;
@@ -60,10 +60,16 @@ module {
             uri : ?Text;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : PlaylistObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : PlaylistObject) : JSON = { value with
+            owner = do ? { PlaylistOwnerObject.toJSON(value.owner!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?PlaylistObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?PlaylistObject {
+            ?{ json with
+                owner = do ? { PlaylistOwnerObject.fromJSON(json.owner!)! };
+            }
+        };
     }
 }

@@ -1,8 +1,12 @@
 
+import { type AudioFeaturesObjectType; JSON = AudioFeaturesObjectType } "./AudioFeaturesObjectType";
+
+import Int "mo:core/Int";
+
 // AudioFeaturesObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type AudioFeaturesObject = {
         /// A confidence measure from 0.0 to 1.0 of whether the track is acoustic. 1.0 represents high confidence the track is acoustic. 
         acousticness : ?Float;
@@ -31,11 +35,10 @@ module {
         /// The overall estimated tempo of a track in beats per minute (BPM). In musical terminology, tempo is the speed or pace of a given piece and derives directly from the average beat duration. 
         tempo : ?Float;
         /// An estimated time signature. The time signature (meter) is a notational convention to specify how many beats are in each bar (or measure). The time signature ranges from 3 to 7 indicating time signatures of \"3/4\", to \"7/4\".
-        time_signature : ?Int;
+        time_signature : ?Nat;
         /// A link to the Web API endpoint providing full details of the track. 
         track_href : ?Text;
-        /// The object type. 
-        type_ : ?Text;
+        type_ : ?AudioFeaturesObjectType;
         /// The Spotify URI for the track. 
         uri : ?Text;
         /// A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks with low valence sound more negative (e.g. sad, depressed, angry). 
@@ -62,15 +65,22 @@ module {
             tempo : ?Float;
             time_signature : ?Int;
             track_href : ?Text;
-            type_ : ?Text;
+            type_ : ?AudioFeaturesObjectType.JSON;
             uri : ?Text;
             valence : ?Float;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : AudioFeaturesObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : AudioFeaturesObject) : JSON = { value with
+            type_ = do ? { AudioFeaturesObjectType.toJSON(value.type_!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?AudioFeaturesObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?AudioFeaturesObject {
+            ?{ json with
+                time_signature = switch (json.time_signature) { case (?v) if (v < 0) null else ?Int.abs(v); case null null };
+                type_ = do ? { AudioFeaturesObjectType.fromJSON(json.type_!)! };
+            }
+        };
     }
 }

@@ -2,7 +2,7 @@
 // ExternalIdObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type ExternalIdObject = {
         /// [International Standard Recording Code](http://en.wikipedia.org/wiki/International_Standard_Recording_Code) 
         isrc : ?Text;
@@ -22,10 +22,10 @@ module {
             upc : ?Text;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : ExternalIdObject) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?ExternalIdObject = ?json;
     }
 }

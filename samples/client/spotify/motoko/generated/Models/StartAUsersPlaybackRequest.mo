@@ -3,7 +3,7 @@ import { type Map } "mo:core/pure/Map";
 // StartAUsersPlaybackRequest.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type StartAUsersPlaybackRequest = {
         /// Optional. Spotify URI of the context to play. Valid contexts are albums, artists & playlists. `{context_uri:\"spotify:album:1Je1IMUlBXcx1Fz0WE7oPT\"}` 
         context_uri : ?Map<Text, Text>;
@@ -26,10 +26,10 @@ module {
             position_ms : ?Map<Text, Text>;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : StartAUsersPlaybackRequest) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?StartAUsersPlaybackRequest = ?json;
     }
 }

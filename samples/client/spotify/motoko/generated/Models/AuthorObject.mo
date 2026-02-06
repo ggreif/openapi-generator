@@ -2,7 +2,7 @@
 // AuthorObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type AuthorObject = {
         /// The name of the author. 
         name : ?Text;
@@ -16,10 +16,10 @@ module {
             name : ?Text;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : AuthorObject) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?AuthorObject = ?json;
     }
 }

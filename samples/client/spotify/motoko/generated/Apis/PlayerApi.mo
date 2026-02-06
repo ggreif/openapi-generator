@@ -16,12 +16,12 @@ import { type TransferAUsersPlaybackRequest; JSON = TransferAUsersPlaybackReques
 module {
     // Management Canister interface for HTTP outcalls
     // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
-    type HttpHeader = {
+    type http_header = {
         name : Text;
         value : Text;
     };
 
-    type HttpMethod = {
+    type http_method = {
         #get;
         #head;
         #post;
@@ -32,33 +32,33 @@ module {
         // #delete;
     };
 
-    type CanisterHttpRequestArgument = {
+    type http_request_args = {
         url : Text;
         max_response_bytes : ?Nat64;
-        method : HttpMethod;
-        headers : [HttpHeader];
+        method : http_method;
+        headers : [http_header];
         body : ?Blob;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
     };
 
-    type CanisterHttpResponsePayload = {
+    type http_request_result = {
         status : Nat;
-        headers : [HttpHeader];
+        headers : [http_header];
         body : Blob;
     };
 
-    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (http_request_args) -> async http_request_result }).http_request;
 
     type Config__ = {
         baseUrl : Text;
         accessToken : ?Text;
         max_response_bytes : ?Nat64;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
@@ -84,7 +84,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #post;
             headers;
@@ -114,7 +114,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -122,7 +122,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -241,7 +241,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -249,7 +249,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -367,7 +367,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -375,7 +375,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -477,7 +477,7 @@ module {
 
     /// Get Recently Played Tracks 
     /// Get tracks from the current user's recently played tracks. _**Note**: Currently doesn't support podcast episodes._ 
-    public func getRecentlyPlayed(config : Config__, limit : Int, after : Int, before : Int) : async* CursorPagingPlayHistoryObject {
+    public func getRecentlyPlayed(config : Config__, limit : Nat, after : Int, before : Int) : async* CursorPagingPlayHistoryObject {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/me/player/recently-played"
             # "?" # "limit=" # Int.toText(limit) # "&" # "after=" # Int.toText(after) # "&" # "before=" # Int.toText(before);
@@ -494,7 +494,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -502,7 +502,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -621,7 +621,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -629,7 +629,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -748,7 +748,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -779,7 +779,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -810,7 +810,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -841,7 +841,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -872,7 +872,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #post;
             headers;
@@ -903,7 +903,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #post;
             headers;
@@ -934,7 +934,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -970,7 +970,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -1000,7 +1000,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -1063,7 +1063,7 @@ module {
 
         /// Get Recently Played Tracks 
         /// Get tracks from the current user's recently played tracks. _**Note**: Currently doesn't support podcast episodes._ 
-        public func getRecentlyPlayed(limit : Int, after : Int, before : Int) : async CursorPagingPlayHistoryObject {
+        public func getRecentlyPlayed(limit : Nat, after : Int, before : Int) : async CursorPagingPlayHistoryObject {
             await* operations__.getRecentlyPlayed(config, limit, after, before)
         };
 

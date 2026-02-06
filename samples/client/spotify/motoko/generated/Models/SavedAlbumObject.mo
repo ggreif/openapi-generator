@@ -4,7 +4,7 @@ import { type AlbumObject; JSON = AlbumObject } "./AlbumObject";
 // SavedAlbumObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type SavedAlbumObject = {
         /// The date and time the album was saved Timestamps are returned in ISO 8601 format as Coordinated Universal Time (UTC) with a zero offset: YYYY-MM-DDTHH:MM:SSZ. If the time is imprecise (for example, the date/time of an album release), an additional field indicates the precision; see for example, release_date in an album object. 
         added_at : ?Text;
@@ -18,13 +18,19 @@ module {
         // Named "JSON" to avoid shadowing the outer SavedAlbumObject type
         public type JSON = {
             added_at : ?Text;
-            album : ?AlbumObject;
+            album : ?AlbumObject.JSON;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : SavedAlbumObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : SavedAlbumObject) : JSON = { value with
+            album = do ? { AlbumObject.toJSON(value.album!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?SavedAlbumObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?SavedAlbumObject {
+            ?{ json with
+                album = do ? { AlbumObject.fromJSON(json.album!)! };
+            }
+        };
     }
 }

@@ -6,17 +6,18 @@ import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
 import { type ApiResponse; JSON = ApiResponse } "../Models/ApiResponse";
+import { type FindPetsByStatusStatusParameterInner; JSON = FindPetsByStatusStatusParameterInner } "../Models/FindPetsByStatusStatusParameterInner";
 import { type Pet; JSON = Pet } "../Models/Pet";
 
 module {
     // Management Canister interface for HTTP outcalls
     // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
-    type HttpHeader = {
+    type http_header = {
         name : Text;
         value : Text;
     };
 
-    type HttpMethod = {
+    type http_method = {
         #get;
         #head;
         #post;
@@ -27,33 +28,33 @@ module {
         // #delete;
     };
 
-    type CanisterHttpRequestArgument = {
+    type http_request_args = {
         url : Text;
         max_response_bytes : ?Nat64;
-        method : HttpMethod;
-        headers : [HttpHeader];
+        method : http_method;
+        headers : [http_header];
         body : ?Blob;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
     };
 
-    type CanisterHttpResponsePayload = {
+    type http_request_result = {
         status : Nat;
-        headers : [HttpHeader];
+        headers : [http_header];
         body : Blob;
     };
 
-    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (http_request_args) -> async http_request_result }).http_request;
 
     type Config__ = {
         baseUrl : Text;
         accessToken : ?Text;
         max_response_bytes : ?Nat64;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
@@ -78,7 +79,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #post;
             headers;
@@ -91,7 +92,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -152,7 +153,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #delete;
             headers;
@@ -166,10 +167,10 @@ module {
 
     /// Finds Pets by status
     /// Multiple status values can be provided with comma separated strings
-    public func findPetsByStatus(config : Config__, status : [Text]) : async* [Pet] {
+    public func findPetsByStatus(config : Config__, status : [FindPetsByStatusStatusParameterInner]) : async* [Pet] {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/pet/findByStatus"
-            # "?" # "status=" # (switch (status) { case (#available) available; case (#pending) pending; case (#sold) sold; });
+            # "?" # "status=" # debug_show(status);
 
         let baseHeaders = [
             { name = "Content-Type"; value = "application/json; charset=utf-8" }
@@ -183,7 +184,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -191,7 +192,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -252,7 +253,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -260,7 +261,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -321,7 +322,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -329,7 +330,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -392,7 +393,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -405,7 +406,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -473,7 +474,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #post;
             headers;
@@ -504,7 +505,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #post;
             headers;
@@ -512,7 +513,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -576,7 +577,7 @@ module {
 
         /// Finds Pets by status
         /// Multiple status values can be provided with comma separated strings
-        public func findPetsByStatus(status : [Text]) : async [Pet] {
+        public func findPetsByStatus(status : [FindPetsByStatusStatusParameterInner]) : async [Pet] {
             await* operations__.findPetsByStatus(config, status)
         };
 

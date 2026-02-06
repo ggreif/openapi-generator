@@ -6,17 +6,19 @@ import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
 import { type GetAnAlbum401Response; JSON = GetAnAlbum401Response } "../Models/GetAnAlbum401Response";
+import { type IncludeExternal; JSON = IncludeExternal } "../Models/IncludeExternal";
+import { type ItemTypeInner; JSON = ItemTypeInner } "../Models/ItemTypeInner";
 import { type Search200Response; JSON = Search200Response } "../Models/Search200Response";
 
 module {
     // Management Canister interface for HTTP outcalls
     // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
-    type HttpHeader = {
+    type http_header = {
         name : Text;
         value : Text;
     };
 
-    type HttpMethod = {
+    type http_method = {
         #get;
         #head;
         #post;
@@ -27,33 +29,33 @@ module {
         // #delete;
     };
 
-    type CanisterHttpRequestArgument = {
+    type http_request_args = {
         url : Text;
         max_response_bytes : ?Nat64;
-        method : HttpMethod;
-        headers : [HttpHeader];
+        method : http_method;
+        headers : [http_header];
         body : ?Blob;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
     };
 
-    type CanisterHttpResponsePayload = {
+    type http_request_result = {
         status : Nat;
-        headers : [HttpHeader];
+        headers : [http_header];
         body : Blob;
     };
 
-    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (http_request_args) -> async http_request_result }).http_request;
 
     type Config__ = {
         baseUrl : Text;
         accessToken : ?Text;
         max_response_bytes : ?Nat64;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
@@ -62,10 +64,10 @@ module {
 
     /// Search for Item 
     /// Get Spotify catalog information about albums, artists, playlists, tracks, shows, episodes or audiobooks that match a keyword string. Audiobooks are only available within the US, UK, Canada, Ireland, New Zealand and Australia markets. 
-    public func search(config : Config__, q : Text, type_ : [Text], market : Text, limit : Int, offset : Int, includeExternal : Text) : async* Search200Response {
+    public func search(config : Config__, q : Text, type_ : [ItemTypeInner], market : Text, limit : Nat, offset : Nat, includeExternal : IncludeExternal) : async* Search200Response {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/search"
-            # "?" # "q=" # q # "&" # "type=" # (switch (type_) { case (#album) album; case (#artist) artist; case (#playlist) playlist; case (#track) track; case (#show) show; case (#episode) episode; case (#audiobook) audiobook; }) # "&" # "market=" # market # "&" # "limit=" # Int.toText(limit) # "&" # "offset=" # Int.toText(offset) # "&" # "include_external=" # (switch (includeExternal) { case (#audio) audio; });
+            # "?" # "q=" # q # "&" # "type=" # debug_show(type_) # "&" # "market=" # market # "&" # "limit=" # Int.toText(limit) # "&" # "offset=" # Int.toText(offset) # "&" # "include_external=" # IncludeExternal.toJSON(includeExternal);
 
         let baseHeaders = [
             { name = "Content-Type"; value = "application/json; charset=utf-8" }
@@ -79,7 +81,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -87,7 +89,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -195,7 +197,7 @@ module {
     public module class SearchApi(config : Config__) {
         /// Search for Item 
         /// Get Spotify catalog information about albums, artists, playlists, tracks, shows, episodes or audiobooks that match a keyword string. Audiobooks are only available within the US, UK, Canada, Ireland, New Zealand and Australia markets. 
-        public func search(q : Text, type_ : [Text], market : Text, limit : Int, offset : Int, includeExternal : Text) : async Search200Response {
+        public func search(q : Text, type_ : [ItemTypeInner], market : Text, limit : Nat, offset : Nat, includeExternal : IncludeExternal) : async Search200Response {
             await* operations__.search(config, q, type_, market, limit, offset, includeExternal)
         };
 

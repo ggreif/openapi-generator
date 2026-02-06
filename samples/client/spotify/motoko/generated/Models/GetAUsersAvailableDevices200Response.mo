@@ -4,7 +4,7 @@ import { type DeviceObject; JSON = DeviceObject } "./DeviceObject";
 // GetAUsersAvailableDevices200Response.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type GetAUsersAvailableDevices200Response = {
         devices : [DeviceObject];
     };
@@ -17,10 +17,10 @@ module {
             devices : [DeviceObject];
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : GetAUsersAvailableDevices200Response) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?GetAUsersAvailableDevices200Response = ?json;
     }
 }

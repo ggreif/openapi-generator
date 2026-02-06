@@ -4,7 +4,7 @@ import { type SimplifiedShowObject; JSON = SimplifiedShowObject } "./SimplifiedS
 // PagingSimplifiedShowObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type PagingSimplifiedShowObject = {
         /// A link to the Web API endpoint returning the full result of the request 
         href : Text;
@@ -35,10 +35,10 @@ module {
             items : [SimplifiedShowObject];
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : PagingSimplifiedShowObject) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?PagingSimplifiedShowObject = ?json;
     }
 }

@@ -4,7 +4,7 @@ import { type PagingSimplifiedAlbumObject; JSON = PagingSimplifiedAlbumObject } 
 // GetNewReleases200Response.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type GetNewReleases200Response = {
         albums : PagingSimplifiedAlbumObject;
     };
@@ -17,10 +17,10 @@ module {
             albums : PagingSimplifiedAlbumObject;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : GetNewReleases200Response) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?GetNewReleases200Response = ?json;
     }
 }

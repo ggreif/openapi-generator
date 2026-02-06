@@ -10,7 +10,7 @@ import { type QueueObjectCurrentlyPlaying; JSON = QueueObjectCurrentlyPlaying } 
 // CurrentlyPlayingContextObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type CurrentlyPlayingContextObject = {
         /// The device that is currently active. 
         device : ?DeviceObject;
@@ -45,15 +45,21 @@ module {
             timestamp : ?Int;
             progress_ms : ?Int;
             is_playing : ?Bool;
-            item : ?QueueObjectCurrentlyPlaying;
+            item : ?QueueObjectCurrentlyPlaying.JSON;
             currently_playing_type : ?Text;
             actions : ?DisallowsObject;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : CurrentlyPlayingContextObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : CurrentlyPlayingContextObject) : JSON = { value with
+            item = do ? { QueueObjectCurrentlyPlaying.toJSON(value.item!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?CurrentlyPlayingContextObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?CurrentlyPlayingContextObject {
+            ?{ json with
+                item = do ? { QueueObjectCurrentlyPlaying.fromJSON(json.item!)! };
+            }
+        };
     }
 }

@@ -1,21 +1,22 @@
 
 import { type Category; JSON = Category } "./Category";
 
+import { type PetStatus; JSON = PetStatus } "./PetStatus";
+
 import { type Tag; JSON = Tag } "./Tag";
 
 // Pet.mo
 /// A pet for sale in the pet store
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type Pet = {
         id : ?Int;
         category : ?Category;
         name : Text;
         photoUrls : [Text];
         tags : ?[Tag];
-        /// pet status in the store
-        status : ?Text;
+        status : ?PetStatus;
     };
 
     // JSON sub-module: everything needed for JSON serialization
@@ -28,13 +29,19 @@ module {
             name : Text;
             photoUrls : [Text];
             tags : ?[Tag];
-            status : ?Text;
+            status : ?PetStatus.JSON;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : Pet) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : Pet) : JSON = { value with
+            status = do ? { PetStatus.toJSON(value.status!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?Pet = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?Pet {
+            ?{ json with
+                status = do ? { PetStatus.fromJSON(json.status!)! };
+            }
+        };
     }
 }

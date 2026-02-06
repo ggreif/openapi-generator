@@ -7,12 +7,14 @@ import { type SimplifiedAlbumObject; JSON = SimplifiedAlbumObject } "./Simplifie
 
 import { type SimplifiedArtistObject; JSON = SimplifiedArtistObject } "./SimplifiedArtistObject";
 
+import { type TrackObjectType; JSON = TrackObjectType } "./TrackObjectType";
+
 import { type TrackRestrictionObject; JSON = TrackRestrictionObject } "./TrackRestrictionObject";
 
 // TrackObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type TrackObject = {
         /// The album on which the track appears. The album object includes a link in `href` to full information about the album. 
         album : ?SimplifiedAlbumObject;
@@ -48,8 +50,7 @@ module {
         preview_url : ?Text;
         /// The number of the track. If an album has several discs, the track number is the number on the specified disc. 
         track_number : ?Int;
-        /// The object type: \"track\". 
-        type_ : ?Text;
+        type_ : ?TrackObjectType;
         /// The [Spotify URI](/documentation/web-api/concepts/spotify-uris-ids) for the track. 
         uri : ?Text;
         /// Whether or not the track is from a local file. 
@@ -61,7 +62,7 @@ module {
         // JSON-facing Motoko type: mirrors JSON structure
         // Named "JSON" to avoid shadowing the outer TrackObject type
         public type JSON = {
-            album : ?SimplifiedAlbumObject;
+            album : ?SimplifiedAlbumObject.JSON;
             artists : ?[SimplifiedArtistObject];
             available_markets : ?[Text];
             disc_number : ?Int;
@@ -78,15 +79,23 @@ module {
             popularity : ?Int;
             preview_url : ?Text;
             track_number : ?Int;
-            type_ : ?Text;
+            type_ : ?TrackObjectType.JSON;
             uri : ?Text;
             is_local : ?Bool;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : TrackObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : TrackObject) : JSON = { value with
+            album = do ? { SimplifiedAlbumObject.toJSON(value.album!) };
+            type_ = do ? { TrackObjectType.toJSON(value.type_!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?TrackObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?TrackObject {
+            ?{ json with
+                album = do ? { SimplifiedAlbumObject.fromJSON(json.album!)! };
+                type_ = do ? { TrackObjectType.fromJSON(json.type_!)! };
+            }
+        };
     }
 }

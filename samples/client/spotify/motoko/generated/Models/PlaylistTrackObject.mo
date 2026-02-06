@@ -6,7 +6,7 @@ import { type PlaylistUserObject; JSON = PlaylistUserObject } "./PlaylistUserObj
 // PlaylistTrackObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type PlaylistTrackObject = {
         /// The date and time the track or episode was added. _**Note**: some very old playlists may return `null` in this field._ 
         added_at : ?Text;
@@ -23,15 +23,23 @@ module {
         // Named "JSON" to avoid shadowing the outer PlaylistTrackObject type
         public type JSON = {
             added_at : ?Text;
-            added_by : ?PlaylistUserObject;
+            added_by : ?PlaylistUserObject.JSON;
             is_local : ?Bool;
-            track : ?PlaylistTrackObjectTrack;
+            track : ?PlaylistTrackObjectTrack.JSON;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : PlaylistTrackObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : PlaylistTrackObject) : JSON = { value with
+            added_by = do ? { PlaylistUserObject.toJSON(value.added_by!) };
+            track = do ? { PlaylistTrackObjectTrack.toJSON(value.track!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?PlaylistTrackObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?PlaylistTrackObject {
+            ?{ json with
+                added_by = do ? { PlaylistUserObject.fromJSON(json.added_by!)! };
+                track = do ? { PlaylistTrackObjectTrack.fromJSON(json.track!)! };
+            }
+        };
     }
 }

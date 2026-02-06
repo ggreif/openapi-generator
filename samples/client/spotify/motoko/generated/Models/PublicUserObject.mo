@@ -5,10 +5,12 @@ import { type FollowersObject; JSON = FollowersObject } "./FollowersObject";
 
 import { type ImageObject; JSON = ImageObject } "./ImageObject";
 
+import { type PublicUserObjectType; JSON = PublicUserObjectType } "./PublicUserObjectType";
+
 // PublicUserObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type PublicUserObject = {
         /// The name displayed on the user's profile. `null` if not available. 
         display_name : ?Text;
@@ -22,8 +24,7 @@ module {
         id : ?Text;
         /// The user's profile image. 
         images : ?[ImageObject];
-        /// The object type. 
-        type_ : ?Text;
+        type_ : ?PublicUserObjectType;
         /// The [Spotify URI](/documentation/web-api/concepts/spotify-uris-ids) for this user. 
         uri : ?Text;
     };
@@ -39,14 +40,20 @@ module {
             href : ?Text;
             id : ?Text;
             images : ?[ImageObject];
-            type_ : ?Text;
+            type_ : ?PublicUserObjectType.JSON;
             uri : ?Text;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : PublicUserObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : PublicUserObject) : JSON = { value with
+            type_ = do ? { PublicUserObjectType.toJSON(value.type_!) };
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?PublicUserObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?PublicUserObject {
+            ?{ json with
+                type_ = do ? { PublicUserObjectType.fromJSON(json.type_!)! };
+            }
+        };
     }
 }

@@ -22,12 +22,12 @@ import { type ReorderOrReplacePlaylistsTracksRequest; JSON = ReorderOrReplacePla
 module {
     // Management Canister interface for HTTP outcalls
     // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
-    type HttpHeader = {
+    type http_header = {
         name : Text;
         value : Text;
     };
 
-    type HttpMethod = {
+    type http_method = {
         #get;
         #head;
         #post;
@@ -38,33 +38,33 @@ module {
         // #delete;
     };
 
-    type CanisterHttpRequestArgument = {
+    type http_request_args = {
         url : Text;
         max_response_bytes : ?Nat64;
-        method : HttpMethod;
-        headers : [HttpHeader];
+        method : http_method;
+        headers : [http_header];
         body : ?Blob;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
     };
 
-    type CanisterHttpResponsePayload = {
+    type http_request_result = {
         status : Nat;
-        headers : [HttpHeader];
+        headers : [http_header];
         body : Blob;
     };
 
-    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (http_request_args) -> async http_request_result }).http_request;
 
     type Config__ = {
         baseUrl : Text;
         accessToken : ?Text;
         max_response_bytes : ?Nat64;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
@@ -91,7 +91,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #post;
             headers;
@@ -104,7 +104,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -223,7 +223,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -260,7 +260,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -268,7 +268,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -382,7 +382,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #post;
             headers;
@@ -395,7 +395,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -514,7 +514,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -533,7 +533,7 @@ module {
 
     /// Get Category's Playlists 
     /// Get a list of Spotify playlists tagged with a particular category. 
-    public func getACategoriesPlaylists(config : Config__, categoryId : Text, limit : Int, offset : Int) : async* PagingFeaturedPlaylistObject {
+    public func getACategoriesPlaylists(config : Config__, categoryId : Text, limit : Nat, offset : Int) : async* PagingFeaturedPlaylistObject {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/browse/categories/{category_id}/playlists"
             |> Text.replace(_, #text "{category_id}", categoryId)
@@ -551,7 +551,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -559,7 +559,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -661,7 +661,7 @@ module {
 
     /// Get Current User's Playlists 
     /// Get a list of the playlists owned or followed by the current Spotify user. 
-    public func getAListOfCurrentUsersPlaylists(config : Config__, limit : Int, offset : Int) : async* PagingPlaylistObject {
+    public func getAListOfCurrentUsersPlaylists(config : Config__, limit : Nat, offset : Int) : async* PagingPlaylistObject {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/me/playlists"
             # "?" # "limit=" # Int.toText(limit) # "&" # "offset=" # Int.toText(offset);
@@ -678,7 +678,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -686,7 +686,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -788,7 +788,7 @@ module {
 
     /// Get Featured Playlists 
     /// Get a list of Spotify featured playlists (shown, for example, on a Spotify player's 'Browse' tab). 
-    public func getFeaturedPlaylists(config : Config__, locale : Text, limit : Int, offset : Int) : async* PagingFeaturedPlaylistObject {
+    public func getFeaturedPlaylists(config : Config__, locale : Text, limit : Nat, offset : Int) : async* PagingFeaturedPlaylistObject {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/browse/featured-playlists"
             # "?" # "locale=" # locale # "&" # "limit=" # Int.toText(limit) # "&" # "offset=" # Int.toText(offset);
@@ -805,7 +805,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -813,7 +813,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -915,7 +915,7 @@ module {
 
     /// Get User's Playlists 
     /// Get a list of the playlists owned or followed by a Spotify user. 
-    public func getListUsersPlaylists(config : Config__, userId : Text, limit : Int, offset : Int) : async* PagingPlaylistObject {
+    public func getListUsersPlaylists(config : Config__, userId : Text, limit : Nat, offset : Int) : async* PagingPlaylistObject {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/users/{user_id}/playlists"
             |> Text.replace(_, #text "{user_id}", userId)
@@ -933,7 +933,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -941,7 +941,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -1061,7 +1061,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -1069,7 +1069,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -1188,7 +1188,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -1196,7 +1196,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -1299,7 +1299,7 @@ module {
 
     /// Get Playlist Items 
     /// Get full details of the items of a playlist owned by a Spotify user. 
-    public func getPlaylistsTracks(config : Config__, playlistId : Text, market : Text, fields : Text, limit : Int, offset : Int, additionalTypes : Text) : async* PagingPlaylistTrackObject {
+    public func getPlaylistsTracks(config : Config__, playlistId : Text, market : Text, fields : Text, limit : Nat, offset : Int, additionalTypes : Text) : async* PagingPlaylistTrackObject {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/playlists/{playlist_id}/tracks"
             |> Text.replace(_, #text "{playlist_id}", playlistId)
@@ -1317,7 +1317,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -1325,7 +1325,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -1444,7 +1444,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #delete;
             headers;
@@ -1457,7 +1457,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -1577,7 +1577,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -1590,7 +1590,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -1709,7 +1709,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #delete;
             headers;
@@ -1740,7 +1740,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #put;
             headers;
@@ -1810,25 +1810,25 @@ module {
 
         /// Get Category's Playlists 
         /// Get a list of Spotify playlists tagged with a particular category. 
-        public func getACategoriesPlaylists(categoryId : Text, limit : Int, offset : Int) : async PagingFeaturedPlaylistObject {
+        public func getACategoriesPlaylists(categoryId : Text, limit : Nat, offset : Int) : async PagingFeaturedPlaylistObject {
             await* operations__.getACategoriesPlaylists(config, categoryId, limit, offset)
         };
 
         /// Get Current User's Playlists 
         /// Get a list of the playlists owned or followed by the current Spotify user. 
-        public func getAListOfCurrentUsersPlaylists(limit : Int, offset : Int) : async PagingPlaylistObject {
+        public func getAListOfCurrentUsersPlaylists(limit : Nat, offset : Int) : async PagingPlaylistObject {
             await* operations__.getAListOfCurrentUsersPlaylists(config, limit, offset)
         };
 
         /// Get Featured Playlists 
         /// Get a list of Spotify featured playlists (shown, for example, on a Spotify player's 'Browse' tab). 
-        public func getFeaturedPlaylists(locale : Text, limit : Int, offset : Int) : async PagingFeaturedPlaylistObject {
+        public func getFeaturedPlaylists(locale : Text, limit : Nat, offset : Int) : async PagingFeaturedPlaylistObject {
             await* operations__.getFeaturedPlaylists(config, locale, limit, offset)
         };
 
         /// Get User's Playlists 
         /// Get a list of the playlists owned or followed by a Spotify user. 
-        public func getListUsersPlaylists(userId : Text, limit : Int, offset : Int) : async PagingPlaylistObject {
+        public func getListUsersPlaylists(userId : Text, limit : Nat, offset : Int) : async PagingPlaylistObject {
             await* operations__.getListUsersPlaylists(config, userId, limit, offset)
         };
 
@@ -1846,7 +1846,7 @@ module {
 
         /// Get Playlist Items 
         /// Get full details of the items of a playlist owned by a Spotify user. 
-        public func getPlaylistsTracks(playlistId : Text, market : Text, fields : Text, limit : Int, offset : Int, additionalTypes : Text) : async PagingPlaylistTrackObject {
+        public func getPlaylistsTracks(playlistId : Text, market : Text, fields : Text, limit : Nat, offset : Int, additionalTypes : Text) : async PagingPlaylistTrackObject {
             await* operations__.getPlaylistsTracks(config, playlistId, market, fields, limit, offset, additionalTypes)
         };
 

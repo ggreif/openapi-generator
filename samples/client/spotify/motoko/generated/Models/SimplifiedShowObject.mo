@@ -5,10 +5,12 @@ import { type ExternalUrlObject; JSON = ExternalUrlObject } "./ExternalUrlObject
 
 import { type ImageObject; JSON = ImageObject } "./ImageObject";
 
+import { type ShowBaseType; JSON = ShowBaseType } "./ShowBaseType";
+
 // SimplifiedShowObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type SimplifiedShowObject = {
         /// A list of the countries in which the show can be played, identified by their [ISO 3166-1 alpha-2](http://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) code. 
         available_markets : [Text];
@@ -38,8 +40,7 @@ module {
         name : Text;
         /// The publisher of the show. 
         publisher : Text;
-        /// The object type. 
-        type_ : Text;
+        type_ : ShowBaseType;
         /// The [Spotify URI](/documentation/web-api/concepts/spotify-uris-ids) for the show. 
         uri : Text;
         /// The total number of episodes in the show. 
@@ -65,15 +66,22 @@ module {
             media_type : Text;
             name : Text;
             publisher : Text;
-            type_ : Text;
+            type_ : ShowBaseType.JSON;
             uri : Text;
             total_episodes : Int;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : SimplifiedShowObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : SimplifiedShowObject) : JSON = { value with
+            type_ = ShowBaseType.toJSON(value.type_);
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?SimplifiedShowObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?SimplifiedShowObject {
+            let ?type_ = ShowBaseType.fromJSON(json.type_) else return null;
+            ?{ json with
+                type_;
+            }
+        };
     }
 }

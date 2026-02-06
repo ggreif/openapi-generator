@@ -4,7 +4,7 @@ import { type CursorObject; JSON = CursorObject } "./CursorObject";
 // CursorPagingObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type CursorPagingObject = {
         /// A link to the Web API endpoint returning the full result of the request.
         href : ?Text;
@@ -30,10 +30,10 @@ module {
             total : ?Int;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
+        // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : CursorPagingObject) : JSON = value;
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
+        // Convert JSON-facing Motoko type to User-facing type
         public func fromJSON(json : JSON) : ?CursorPagingObject = ?json;
     }
 }

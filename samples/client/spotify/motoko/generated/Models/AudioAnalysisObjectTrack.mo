@@ -1,8 +1,10 @@
 
+import Int "mo:core/Int";
+
 // AudioAnalysisObjectTrack.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type AudioAnalysisObjectTrack = {
         /// The exact number of audio samples analyzed from this track. See also `analysis_sample_rate`.
         num_samples : ?Int;
@@ -29,7 +31,7 @@ module {
         /// The confidence, from 0.0 to 1.0, of the reliability of the `tempo`.
         tempo_confidence : ?Float;
         /// An estimated time signature. The time signature (meter) is a notational convention to specify how many beats are in each bar (or measure). The time signature ranges from 3 to 7 indicating time signatures of \"3/4\", to \"7/4\".
-        time_signature : ?Int;
+        time_signature : ?Nat;
         /// The confidence, from 0.0 to 1.0, of the reliability of the `time_signature`.
         time_signature_confidence : ?Float;
         /// The key the track is in. Integers map to pitches using standard [Pitch Class notation](https://en.wikipedia.org/wiki/Pitch_class). E.g. 0 = C, 1 = C♯/D♭, 2 = D, and so on. If no key was detected, the value is -1. 
@@ -91,10 +93,66 @@ module {
             rhythm_version : ?Float;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : AudioAnalysisObjectTrack) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : AudioAnalysisObjectTrack) : JSON = {
+            num_samples = value.num_samples;
+            duration = value.duration;
+            sample_md5 = value.sample_md5;
+            offset_seconds = value.offset_seconds;
+            window_seconds = value.window_seconds;
+            analysis_sample_rate = value.analysis_sample_rate;
+            analysis_channels = value.analysis_channels;
+            end_of_fade_in = value.end_of_fade_in;
+            start_of_fade_out = value.start_of_fade_out;
+            loudness = value.loudness;
+            tempo = value.tempo;
+            tempo_confidence = value.tempo_confidence;
+            time_signature = value.time_signature;
+            time_signature_confidence = value.time_signature_confidence;
+            key = value.key;
+            key_confidence = value.key_confidence;
+            mode = value.mode;
+            mode_confidence = value.mode_confidence;
+            codestring = value.codestring;
+            code_version = value.code_version;
+            echoprintstring = value.echoprintstring;
+            echoprint_version = value.echoprint_version;
+            synchstring = value.synchstring;
+            synch_version = value.synch_version;
+            rhythmstring = value.rhythmstring;
+            rhythm_version = value.rhythm_version;
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?AudioAnalysisObjectTrack = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?AudioAnalysisObjectTrack {
+            ?{
+                num_samples = json.num_samples;
+                duration = json.duration;
+                sample_md5 = json.sample_md5;
+                offset_seconds = json.offset_seconds;
+                window_seconds = json.window_seconds;
+                analysis_sample_rate = json.analysis_sample_rate;
+                analysis_channels = json.analysis_channels;
+                end_of_fade_in = json.end_of_fade_in;
+                start_of_fade_out = json.start_of_fade_out;
+                loudness = json.loudness;
+                tempo = json.tempo;
+                tempo_confidence = json.tempo_confidence;
+                time_signature = do ? { let v = json.time_signature!; if (v < 0) return null else Int.abs(v) };
+                time_signature_confidence = json.time_signature_confidence;
+                key = json.key;
+                key_confidence = json.key_confidence;
+                mode = json.mode;
+                mode_confidence = json.mode_confidence;
+                codestring = json.codestring;
+                code_version = json.code_version;
+                echoprintstring = json.echoprintstring;
+                echoprint_version = json.echoprint_version;
+                synchstring = json.synchstring;
+                synch_version = json.synch_version;
+                rhythmstring = json.rhythmstring;
+                rhythm_version = json.rhythm_version;
+            }
+        };
     }
 }

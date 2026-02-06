@@ -13,12 +13,12 @@ import { type PagingFeaturedPlaylistObject; JSON = PagingFeaturedPlaylistObject 
 module {
     // Management Canister interface for HTTP outcalls
     // Based on types in https://github.com/dfinity/sdk/blob/master/src/dfx/src/util/ic.did
-    type HttpHeader = {
+    type http_header = {
         name : Text;
         value : Text;
     };
 
-    type HttpMethod = {
+    type http_method = {
         #get;
         #head;
         #post;
@@ -29,33 +29,33 @@ module {
         // #delete;
     };
 
-    type CanisterHttpRequestArgument = {
+    type http_request_args = {
         url : Text;
         max_response_bytes : ?Nat64;
-        method : HttpMethod;
-        headers : [HttpHeader];
+        method : http_method;
+        headers : [http_header];
         body : ?Blob;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
     };
 
-    type CanisterHttpResponsePayload = {
+    type http_request_result = {
         status : Nat;
-        headers : [HttpHeader];
+        headers : [http_header];
         body : Blob;
     };
 
-    let http_request = (actor "aaaaa-aa" : actor { http_request : (CanisterHttpRequestArgument) -> async CanisterHttpResponsePayload }).http_request;
+    let http_request = (actor "aaaaa-aa" : actor { http_request : (http_request_args) -> async http_request_result }).http_request;
 
     type Config__ = {
         baseUrl : Text;
         accessToken : ?Text;
         max_response_bytes : ?Nat64;
         transform : ?{
-            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
             context : Blob;
         };
         is_replicated : ?Bool;
@@ -64,7 +64,7 @@ module {
 
     /// Get Category's Playlists 
     /// Get a list of Spotify playlists tagged with a particular category. 
-    public func getACategoriesPlaylists(config : Config__, categoryId : Text, limit : Int, offset : Int) : async* PagingFeaturedPlaylistObject {
+    public func getACategoriesPlaylists(config : Config__, categoryId : Text, limit : Nat, offset : Int) : async* PagingFeaturedPlaylistObject {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/browse/categories/{category_id}/playlists"
             |> Text.replace(_, #text "{category_id}", categoryId)
@@ -82,7 +82,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -90,7 +90,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -210,7 +210,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -218,7 +218,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -320,7 +320,7 @@ module {
 
     /// Get Several Browse Categories 
     /// Get a list of categories used to tag items in Spotify (on, for example, the Spotify player’s “Browse” tab). 
-    public func getCategories(config : Config__, locale : Text, limit : Int, offset : Int) : async* GetCategories200Response {
+    public func getCategories(config : Config__, locale : Text, limit : Nat, offset : Int) : async* GetCategories200Response {
         let {baseUrl; accessToken; cycles} = config;
         let url = baseUrl # "/browse/categories"
             # "?" # "locale=" # locale # "&" # "limit=" # Int.toText(limit) # "&" # "offset=" # Int.toText(offset);
@@ -337,7 +337,7 @@ module {
             case null { baseHeaders };
         };
 
-        let request : CanisterHttpRequestArgument = { config with
+        let request : http_request_args = { config with
             url;
             method = #get;
             headers;
@@ -345,7 +345,7 @@ module {
         };
 
         // Call the management canister's http_request method with cycles
-        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+        let response : http_request_result = await (with cycles) http_request(request);
 
         // Check HTTP status code before parsing
         if (response.status >= 200 and response.status < 300) {
@@ -455,7 +455,7 @@ module {
     public module class CategoriesApi(config : Config__) {
         /// Get Category's Playlists 
         /// Get a list of Spotify playlists tagged with a particular category. 
-        public func getACategoriesPlaylists(categoryId : Text, limit : Int, offset : Int) : async PagingFeaturedPlaylistObject {
+        public func getACategoriesPlaylists(categoryId : Text, limit : Nat, offset : Int) : async PagingFeaturedPlaylistObject {
             await* operations__.getACategoriesPlaylists(config, categoryId, limit, offset)
         };
 
@@ -467,7 +467,7 @@ module {
 
         /// Get Several Browse Categories 
         /// Get a list of categories used to tag items in Spotify (on, for example, the Spotify player’s “Browse” tab). 
-        public func getCategories(locale : Text, limit : Int, offset : Int) : async GetCategories200Response {
+        public func getCategories(locale : Text, limit : Nat, offset : Int) : async GetCategories200Response {
             await* operations__.getCategories(config, locale, limit, offset)
         };
 

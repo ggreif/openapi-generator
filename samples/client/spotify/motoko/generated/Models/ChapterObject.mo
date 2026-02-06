@@ -1,6 +1,10 @@
 
 import { type ChapterRestrictionObject; JSON = ChapterRestrictionObject } "./ChapterRestrictionObject";
 
+import { type EpisodeBaseReleaseDatePrecision; JSON = EpisodeBaseReleaseDatePrecision } "./EpisodeBaseReleaseDatePrecision";
+
+import { type EpisodeBaseType; JSON = EpisodeBaseType } "./EpisodeBaseType";
+
 import { type ExternalUrlObject; JSON = ExternalUrlObject } "./ExternalUrlObject";
 
 import { type ImageObject; JSON = ImageObject } "./ImageObject";
@@ -12,7 +16,7 @@ import { type SimplifiedAudiobookObject; JSON = SimplifiedAudiobookObject } "./S
 // ChapterObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type ChapterObject = {
         /// A URL to a 30 second preview (MP3 format) of the chapter. `null` if not available. 
         audio_preview_url : Text;
@@ -44,12 +48,10 @@ module {
         name : Text;
         /// The date the chapter was first released, for example `\"1981-12-15\"`. Depending on the precision, it might be shown as `\"1981\"` or `\"1981-12\"`. 
         release_date : Text;
-        /// The precision with which `release_date` value is known. 
-        release_date_precision : Text;
+        release_date_precision : EpisodeBaseReleaseDatePrecision;
         /// The user's most recent position in the chapter. Set if the supplied access token is a user token and has the scope 'user-read-playback-position'. 
         resume_point : ?ResumePointObject;
-        /// The object type. 
-        type_ : Text;
+        type_ : EpisodeBaseType;
         /// The [Spotify URI](/documentation/web-api/concepts/spotify-uris-ids) for the chapter. 
         uri : Text;
         /// Included in the response when a content restriction is applied. 
@@ -78,18 +80,31 @@ module {
             languages : [Text];
             name : Text;
             release_date : Text;
-            release_date_precision : Text;
+            release_date_precision : EpisodeBaseReleaseDatePrecision.JSON;
             resume_point : ?ResumePointObject;
-            type_ : Text;
+            type_ : EpisodeBaseType.JSON;
             uri : Text;
             restrictions : ?ChapterRestrictionObject;
-            audiobook : SimplifiedAudiobookObject;
+            audiobook : SimplifiedAudiobookObject.JSON;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : ChapterObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : ChapterObject) : JSON = { value with
+            release_date_precision = EpisodeBaseReleaseDatePrecision.toJSON(value.release_date_precision);
+            type_ = EpisodeBaseType.toJSON(value.type_);
+            audiobook = SimplifiedAudiobookObject.toJSON(value.audiobook);
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?ChapterObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?ChapterObject {
+            let ?release_date_precision = EpisodeBaseReleaseDatePrecision.fromJSON(json.release_date_precision) else return null;
+            let ?type_ = EpisodeBaseType.fromJSON(json.type_) else return null;
+            let ?audiobook = SimplifiedAudiobookObject.fromJSON(json.audiobook) else return null;
+            ?{ json with
+                release_date_precision;
+                type_;
+                audiobook;
+            }
+        };
     }
 }

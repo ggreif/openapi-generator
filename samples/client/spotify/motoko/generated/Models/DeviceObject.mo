@@ -1,8 +1,10 @@
 
+import Int "mo:core/Int";
+
 // DeviceObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type DeviceObject = {
         /// The device ID. This ID is unique and persistent to some extent. However, this is not guaranteed and any cached `device_id` should periodically be cleared out and refetched as necessary.
         id : ?Text;
@@ -17,7 +19,7 @@ module {
         /// Device type, such as \"computer\", \"smartphone\" or \"speaker\".
         type_ : ?Text;
         /// The current volume in percent.
-        volume_percent : ?Int;
+        volume_percent : ?Nat;
         /// If this device can be used to set the volume.
         supports_volume : ?Bool;
     };
@@ -37,10 +39,30 @@ module {
             supports_volume : ?Bool;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : DeviceObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : DeviceObject) : JSON = {
+            id = value.id;
+            is_active = value.is_active;
+            is_private_session = value.is_private_session;
+            is_restricted = value.is_restricted;
+            name = value.name;
+            type_ = value.type_;
+            volume_percent = value.volume_percent;
+            supports_volume = value.supports_volume;
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?DeviceObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?DeviceObject {
+            ?{
+                id = json.id;
+                is_active = json.is_active;
+                is_private_session = json.is_private_session;
+                is_restricted = json.is_restricted;
+                name = json.name;
+                type_ = json.type_;
+                volume_percent = do ? { let v = json.volume_percent!; if (v < 0) return null else Int.abs(v) };
+                supports_volume = json.supports_volume;
+            }
+        };
     }
 }

@@ -1,4 +1,8 @@
 
+import { type EpisodeBaseReleaseDatePrecision; JSON = EpisodeBaseReleaseDatePrecision } "./EpisodeBaseReleaseDatePrecision";
+
+import { type EpisodeBaseType; JSON = EpisodeBaseType } "./EpisodeBaseType";
+
 import { type EpisodeRestrictionObject; JSON = EpisodeRestrictionObject } "./EpisodeRestrictionObject";
 
 import { type ExternalUrlObject; JSON = ExternalUrlObject } "./ExternalUrlObject";
@@ -12,7 +16,7 @@ import { type SimplifiedShowObject; JSON = SimplifiedShowObject } "./SimplifiedS
 // EpisodeObject.mo
 
 module {
-    // Motoko-facing type: what application code uses
+    // User-facing type: what application code uses
     public type EpisodeObject = {
         /// A URL to a 30 second preview (MP3 format) of the episode. `null` if not available. 
         audio_preview_url : Text;
@@ -44,12 +48,10 @@ module {
         name : Text;
         /// The date the episode was first released, for example `\"1981-12-15\"`. Depending on the precision, it might be shown as `\"1981\"` or `\"1981-12\"`. 
         release_date : Text;
-        /// The precision with which `release_date` value is known. 
-        release_date_precision : Text;
+        release_date_precision : EpisodeBaseReleaseDatePrecision;
         /// The user's most recent position in the episode. Set if the supplied access token is a user token and has the scope 'user-read-playback-position'. 
         resume_point : ?ResumePointObject;
-        /// The object type. 
-        type_ : Text;
+        type_ : EpisodeBaseType;
         /// The [Spotify URI](/documentation/web-api/concepts/spotify-uris-ids) for the episode. 
         uri : Text;
         /// Included in the response when a content restriction is applied. 
@@ -78,18 +80,31 @@ module {
             languages : [Text];
             name : Text;
             release_date : Text;
-            release_date_precision : Text;
+            release_date_precision : EpisodeBaseReleaseDatePrecision.JSON;
             resume_point : ?ResumePointObject;
-            type_ : Text;
+            type_ : EpisodeBaseType.JSON;
             uri : Text;
             restrictions : ?EpisodeRestrictionObject;
-            show : SimplifiedShowObject;
+            show : SimplifiedShowObject.JSON;
         };
 
-        // Convert Motoko-facing type to JSON-facing Motoko type
-        public func toJSON(value : EpisodeObject) : JSON = value;
+        // Convert User-facing type to JSON-facing Motoko type
+        public func toJSON(value : EpisodeObject) : JSON = { value with
+            release_date_precision = EpisodeBaseReleaseDatePrecision.toJSON(value.release_date_precision);
+            type_ = EpisodeBaseType.toJSON(value.type_);
+            show = SimplifiedShowObject.toJSON(value.show);
+        };
 
-        // Convert JSON-facing Motoko type to Motoko-facing type
-        public func fromJSON(json : JSON) : ?EpisodeObject = ?json;
+        // Convert JSON-facing Motoko type to User-facing type
+        public func fromJSON(json : JSON) : ?EpisodeObject {
+            let ?release_date_precision = EpisodeBaseReleaseDatePrecision.fromJSON(json.release_date_precision) else return null;
+            let ?type_ = EpisodeBaseType.fromJSON(json.type_) else return null;
+            let ?show = SimplifiedShowObject.fromJSON(json.show) else return null;
+            ?{ json with
+                release_date_precision;
+                type_;
+                show;
+            }
+        };
     }
 }
