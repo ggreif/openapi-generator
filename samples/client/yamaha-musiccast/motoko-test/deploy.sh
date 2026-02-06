@@ -3,6 +3,8 @@
 
 cd "$(dirname "$0")"
 
+DFX_MOC_PATH=/Users/ggreif/motoko/bin/moc
+
 # Check for moc-wrapper and add to PATH if needed
 if ! command -v moc-wrapper &> /dev/null; then
   # Try common locations for moc-wrapper

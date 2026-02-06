@@ -5,17 +5,15 @@ import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Error "mo:core/Error";
 import { JSON } "mo:serde";
-// FIXME: destructuring on `actor` types is not implemented yet
+// FIXME: destructuring on `actor` types is not implemented yet for shared functions
 //        type error [M0114], object pattern cannot consume actor type
-//import { type http_request_args; type http_request_result; http_request } "ic:aaaaa-aa";
+import { type http_request_args; type http_request_result } "ic:aaaaa-aa";
 import Mgnt__ = "ic:aaaaa-aa";
 import { type SetInputInputParameter; JSON = SetInputInputParameter } "../Models/SetInputInputParameter";
 import { type SetInputModeParameter; JSON = SetInputModeParameter } "../Models/SetInputModeParameter";
 import { type SetVolumeVolumeParameter; JSON = SetVolumeVolumeParameter } "../Models/SetVolumeVolumeParameter";
 
 module {
-    type http_request_args = Mgnt__.http_request_args;
-    type http_request_result = Mgnt__.http_request_result;
     type http_method = {
         #get;
         #head;
