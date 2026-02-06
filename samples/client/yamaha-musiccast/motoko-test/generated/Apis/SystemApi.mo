@@ -1,0 +1,354 @@
+// SystemApi.mo
+
+import Text "mo:core/Text";
+import Int "mo:core/Int";
+import Array "mo:core/Array";
+import Error "mo:core/Error";
+import { JSON } "mo:serde";
+import { type CanisterHttpRequestArgument; type CanisterHttpResponsePayload; type HttpMethod; type HttpHeader; http_request } "ic:aaaaa-aa";
+
+module {
+    type Config__ = {
+        baseUrl : Text;
+        accessToken : ?Text;
+        max_response_bytes : ?Nat64;
+        transform : ?{
+            function : shared query ({ response : CanisterHttpResponsePayload; context : Blob }) -> async CanisterHttpResponsePayload;
+            context : Blob;
+        };
+        is_replicated : ?Bool;
+        cycles : Nat;
+    };
+
+    /// Get device information
+    /// Returns basic device information including model, version, etc.
+    public func getDeviceInfo(config : Config__) : async* Any {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/system/getDeviceInfo";
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Any |>
+            (switch (_) {
+                case (?result) result;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+    /// Get available device features
+    /// Returns the available features and capabilities of the MusicCast device
+    public func getFeatures(config : Config__) : async* Any {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/system/getFeatures";
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Any |>
+            (switch (_) {
+                case (?result) result;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+    /// Get function status
+    /// Returns function status (e.g., Auto Power Standby)
+    public func getFuncStatus(config : Config__) : async* Any {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/system/getFuncStatus";
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Any |>
+            (switch (_) {
+                case (?result) result;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+    /// Get location info and zone list
+    /// Returns location information and available zones on the device
+    public func getLocationInfo(config : Config__) : async* Any {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/system/getLocationInfo";
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Any |>
+            (switch (_) {
+                case (?result) result;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+    /// Get network status
+    /// Returns the current network status of the device
+    public func getNetworkStatus(config : Config__) : async* Any {
+        let {baseUrl; accessToken; cycles} = config;
+        let url = baseUrl # "/system/getNetworkStatus";
+
+        let baseHeaders = [
+            { name = "Content-Type"; value = "application/json; charset=utf-8" }
+        ];
+
+        // Add Authorization header if access token is provided
+        let headers = switch (accessToken) {
+            case (?token) {
+                Array.concat(baseHeaders, [{ name = "Authorization"; value = "Bearer " # token }]);
+            };
+            case null { baseHeaders };
+        };
+
+        let request : CanisterHttpRequestArgument = { config with
+            url;
+            method = #get;
+            headers;
+            body = null;
+        };
+
+        // Call the management canister's http_request method with cycles
+        let response : CanisterHttpResponsePayload = await (with cycles) http_request(request);
+
+        // Check HTTP status code before parsing
+        if (response.status >= 200 and response.status < 300) {
+            // Success response (2xx): parse as expected return type
+            (switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to decode response body as UTF-8");
+            }) |>
+            (switch (JSON.fromText(_, null)) {
+                case (#ok(blob)) blob;
+                case (#err(msg)) throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to parse JSON: " # msg);
+            }) |>
+            from_candid(_) : ?Any |>
+            (switch (_) {
+                case (?result) result;
+                case null throw Error.reject("HTTP " # Int.toText(response.status) # ": Failed to deserialize response");
+            })
+        } else {
+            // Error response (4xx, 5xx): parse error models and throw
+            let responseText = switch (Text.decodeUtf8(response.body)) {
+                case (?text) text;
+                case null "";  // Empty body for some errors (e.g., 404)
+            };
+
+
+            // Fallback for status codes not defined in OpenAPI spec
+            throw Error.reject("HTTP " # Int.toText(response.status) # ": Unexpected error" #
+                (if (responseText != "") { " - " # responseText } else { "" }));
+        }
+    };
+
+
+    let operations__ = {
+        getDeviceInfo;
+        getFeatures;
+        getFuncStatus;
+        getLocationInfo;
+        getNetworkStatus;
+    };
+
+    public module class SystemApi(config : Config__) {
+        /// Get device information
+        /// Returns basic device information including model, version, etc.
+        public func getDeviceInfo() : async Any {
+            await* operations__.getDeviceInfo(config)
+        };
+
+        /// Get available device features
+        /// Returns the available features and capabilities of the MusicCast device
+        public func getFeatures() : async Any {
+            await* operations__.getFeatures(config)
+        };
+
+        /// Get function status
+        /// Returns function status (e.g., Auto Power Standby)
+        public func getFuncStatus() : async Any {
+            await* operations__.getFuncStatus(config)
+        };
+
+        /// Get location info and zone list
+        /// Returns location information and available zones on the device
+        public func getLocationInfo() : async Any {
+            await* operations__.getLocationInfo(config)
+        };
+
+        /// Get network status
+        /// Returns the current network status of the device
+        public func getNetworkStatus() : async Any {
+            await* operations__.getNetworkStatus(config)
+        };
+
+    }
+}
