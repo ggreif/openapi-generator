@@ -27,7 +27,7 @@ module {
         // Convert User-facing type to JSON-facing Motoko type
         public func toJSON(value : FieldAndEnumMapping) : JSON = { value with
             status_code = HTTPStatusEnum.toJSON(value.status_code);
-            availability_status = switch (value.availability_status) { case (?v) ?AvailabilityEnum.toJSON(v); case null null };
+            availability_status = do ? { AvailabilityEnum.toJSON(value.availability_status!) };
         };
 
         // Convert JSON-facing Motoko type to User-facing type
@@ -35,7 +35,7 @@ module {
             let ?status_code = HTTPStatusEnum.fromJSON(json.status_code) else return null;
             ?{ json with
                 status_code;
-                availability_status = switch (json.availability_status) { case (?v) AvailabilityEnum.fromJSON(v); case null null };
+                availability_status = do ? { AvailabilityEnum.fromJSON(json.availability_status!)! };
             }
         };
     }

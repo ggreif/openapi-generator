@@ -140,17 +140,17 @@ module {
         public func toJSON(value : {{classname}}) : JSON = {{#vendorExtensions.xNoEnumFields}}value{{/vendorExtensions.xNoEnumFields}}{{^vendorExtensions.xNoEnumFields}}{{#vendorExtensions.xHasPartialTransform}}{ value with
 {{#vars}}
 {{#isEnumRef}}
-            {{name}} = {{#required}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/required}}{{^required}}switch (value.{{name}}) { case (?v) ?{{{datatypeWithEnum}}}.toJSON(v); case null null }{{/required}};
+            {{name}} = {{#required}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/required}}{{^required}}do ? { {{{datatypeWithEnum}}}.toJSON(value.{{name}}!) }{{/required}};
 {{/isEnumRef}}
 {{^isEnumRef}}
 {{#vendorExtensions.xNeedsJsonConversion}}
-            {{name}} = {{#required}}{{{dataType}}}.toJSON(value.{{name}}){{/required}}{{^required}}switch (value.{{name}}) { case (?v) ?{{{dataType}}}.toJSON(v); case null null }{{/required}};
+            {{name}} = {{#required}}{{{dataType}}}.toJSON(value.{{name}}){{/required}}{{^required}}do ? { {{{dataType}}}.toJSON(value.{{name}}!) }{{/required}};
 {{/vendorExtensions.xNeedsJsonConversion}}
 {{/isEnumRef}}
 {{/vars}}
         }{{/vendorExtensions.xHasPartialTransform}}{{^vendorExtensions.xHasPartialTransform}}{
 {{#vars}}
-            {{name}} = {{#required}}{{#isEnumRef}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/isEnumRef}}{{^isEnumRef}}{{#vendorExtensions.xNeedsJsonConversion}}{{{dataType}}}.toJSON(value.{{name}}){{/vendorExtensions.xNeedsJsonConversion}}{{^vendorExtensions.xNeedsJsonConversion}}value.{{name}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}}{{^required}}{{#isEnumRef}}switch (value.{{name}}) { case (?v) ?{{{datatypeWithEnum}}}.toJSON(v); case null null }{{/isEnumRef}}{{^isEnumRef}}{{#vendorExtensions.xNeedsJsonConversion}}switch (value.{{name}}) { case (?v) ?{{{dataType}}}.toJSON(v); case null null }{{/vendorExtensions.xNeedsJsonConversion}}{{^vendorExtensions.xNeedsJsonConversion}}value.{{name}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}};
+            {{name}} = {{#required}}{{#isEnumRef}}{{{datatypeWithEnum}}}.toJSON(value.{{name}}){{/isEnumRef}}{{^isEnumRef}}{{#vendorExtensions.xNeedsJsonConversion}}{{{dataType}}}.toJSON(value.{{name}}){{/vendorExtensions.xNeedsJsonConversion}}{{^vendorExtensions.xNeedsJsonConversion}}value.{{name}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}}{{^required}}{{#isEnumRef}}do ? { {{{datatypeWithEnum}}}.toJSON(value.{{name}}!) }{{/isEnumRef}}{{^isEnumRef}}{{#vendorExtensions.xNeedsJsonConversion}}do ? { {{{dataType}}}.toJSON(value.{{name}}!) }{{/vendorExtensions.xNeedsJsonConversion}}{{^vendorExtensions.xNeedsJsonConversion}}value.{{name}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}};
 {{/vars}}
         }{{/vendorExtensions.xHasPartialTransform}}{{/vendorExtensions.xNoEnumFields}};
 
@@ -171,11 +171,11 @@ module {
             ?{ json with
 {{#vars}}
 {{#isEnumRef}}
-                {{name}}{{#required}}{{/required}}{{^required}} = switch (json.{{name}}) { case (?v) {{{datatypeWithEnum}}}.fromJSON(v); case null null }{{/required}};
+                {{name}}{{#required}}{{/required}}{{^required}} = do ? { {{{datatypeWithEnum}}}.fromJSON(json.{{name}}!)! }{{/required}};
 {{/isEnumRef}}
 {{^isEnumRef}}
 {{#vendorExtensions.xNeedsJsonConversion}}
-                {{name}}{{#required}}{{/required}}{{^required}} = switch (json.{{name}}) { case (?v) {{{dataType}}}.fromJSON(v); case null null }{{/required}};
+                {{name}}{{#required}}{{/required}}{{^required}} = do ? { {{{dataType}}}.fromJSON(json.{{name}}!)! }{{/required}};
 {{/vendorExtensions.xNeedsJsonConversion}}
 {{^vendorExtensions.xNeedsJsonConversion}}
 {{#vendorExtensions.x-is-unsigned}}
@@ -200,7 +200,7 @@ module {
 {{/vars}}
             ?{
 {{#vars}}
-                {{name}}{{#required}}{{^isEnumRef}}{{^vendorExtensions.xNeedsJsonConversion}}{{#vendorExtensions.x-is-unsigned}} = if (json.{{name}} < 0) return null else Int.abs(json.{{name}}){{/vendorExtensions.x-is-unsigned}}{{^vendorExtensions.x-is-unsigned}} = json.{{name}}{{/vendorExtensions.x-is-unsigned}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}}{{^required}} = {{#isEnumRef}}switch (json.{{name}}) { case (?v) {{{datatypeWithEnum}}}.fromJSON(v); case null null }{{/isEnumRef}}{{^isEnumRef}}{{#vendorExtensions.xNeedsJsonConversion}}switch (json.{{name}}) { case (?v) {{{dataType}}}.fromJSON(v); case null null }{{/vendorExtensions.xNeedsJsonConversion}}{{^vendorExtensions.xNeedsJsonConversion}}{{#vendorExtensions.x-is-unsigned}}switch (json.{{name}}) { case (?v) if (v < 0) null else ?Int.abs(v); case null null }{{/vendorExtensions.x-is-unsigned}}{{^vendorExtensions.x-is-unsigned}}json.{{name}}{{/vendorExtensions.x-is-unsigned}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}};
+                {{name}}{{#required}}{{^isEnumRef}}{{^vendorExtensions.xNeedsJsonConversion}}{{#vendorExtensions.x-is-unsigned}} = if (json.{{name}} < 0) return null else Int.abs(json.{{name}}){{/vendorExtensions.x-is-unsigned}}{{^vendorExtensions.x-is-unsigned}} = json.{{name}}{{/vendorExtensions.x-is-unsigned}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}}{{^required}} = {{#isEnumRef}}do ? { {{{datatypeWithEnum}}}.fromJSON(json.{{name}}!)! }{{/isEnumRef}}{{^isEnumRef}}{{#vendorExtensions.xNeedsJsonConversion}}do ? { {{{dataType}}}.fromJSON(json.{{name}}!)! }{{/vendorExtensions.xNeedsJsonConversion}}{{^vendorExtensions.xNeedsJsonConversion}}{{#vendorExtensions.x-is-unsigned}}do ? { let v = json.{{name}}!; if (v < 0) return null else Int.abs(v) }{{/vendorExtensions.x-is-unsigned}}{{^vendorExtensions.x-is-unsigned}}json.{{name}}{{/vendorExtensions.x-is-unsigned}}{{/vendorExtensions.xNeedsJsonConversion}}{{/isEnumRef}}{{/required}};
 {{/vars}}
             }
         }{{/vendorExtensions.xHasPartialTransform}}{{/vendorExtensions.xNoEnumFields}};
