@@ -4,6 +4,8 @@
 
 Add comprehensive authentication support to the Motoko OpenAPI generator, enabling generated clients to work with real-world APIs that require authentication (OAuth 2.0 bearer tokens, API keys, Basic Auth). The implementation will be validated using httpbin.org's authentication test endpoints, requiring no mock servers or credentials.
 
+**Phase 5 Addition:** Secure credential management using IC Chain-Key cryptography (vetKeys) for encrypted on-chain storage of API credentials.
+
 ## Current State
 
 - ✅ Generated code accepts `accessToken : ?Text` parameter in Config
@@ -12,6 +14,7 @@ Add comprehensive authentication support to the Motoko OpenAPI generator, enabli
 - ❌ No API key handling (header/query parameter)
 - ❌ No Basic Auth support
 - ❌ No security scheme processing from OpenAPI specs
+- ❌ No secure credential storage mechanism
 
 **TODO Comment:** `MotokoClientCodegen.java:937-940`
 ```java
@@ -33,6 +36,7 @@ Currently, generated Motoko clients cannot authenticate with these APIs because:
 1. Security schemes in OpenAPI specs are ignored during generation
 2. The `accessToken` parameter is accepted but unused
 3. No headers are added to HTTP requests for authentication
+4. **No secure storage for API credentials** - credentials passed in plaintext
 
 ## Solution: Multi-Stage Authentication Implementation
 
@@ -84,6 +88,71 @@ components:
 security:
   - bearerAuth: []
   - apiKeyAuth: []
+```
+
+### Phase 5: Secure Credential Management (vetKeys)
+**Priority:** High - production security requirement
+**IC Chain-Key Pattern:**
+
+Uses IC's vetKeys (Verifiable Encrypted Threshold Keys) for secure on-chain credential storage:
+- Credentials encrypted via threshold cryptography
+- No single node sees plaintext keys
+- Deterministic key derivation (same inputs = same key)
+- Per-principal isolation
+
+**Architecture Options:**
+
+**Option A: Encrypted Storage Pattern (Available Now)**
+```motoko
+// User encrypts in frontend, canister stores encrypted blob
+public shared(msg) func storeEncryptedToken(encryptedBlob : Blob) : async () {
+    credentialStore.put(msg.caller, encryptedBlob);
+};
+
+public shared query(msg) func getEncryptedToken() : async ?Blob {
+    credentialStore.get(msg.caller)
+};
+```
+
+**Option B: vetKeys Pattern (Future - When Available)**
+```motoko
+import { vetKeys } "ic:vetkeys";
+
+// Canister handles encryption/decryption via threshold derivation
+public shared(msg) func storeToken(token : Text) : async () {
+    let derivationPath = Blob.fromArray([0x00, 0x00, 0x00, 0x01]);
+    let encKey = await vetKeys.derive_key({
+        derivation_path = derivationPath;
+        key_id = msg.caller;
+    });
+    let encrypted = encrypt(Text.encodeUtf8(token), encKey);
+    credentialStore.put(msg.caller, encrypted);
+};
+
+public shared(msg) func getToken() : async ?Text {
+    let ?encrypted = credentialStore.get(msg.caller) else return null;
+    let derivationPath = Blob.fromArray([0x00, 0x00, 0x00, 0x01]);
+    let decKey = await vetKeys.derive_key({
+        derivation_path = derivationPath;
+        key_id = msg.caller;
+    });
+    let decrypted = decrypt(encrypted, decKey);
+    ?Text.decodeUtf8(decrypted)
+};
+```
+
+**Option C: Threshold ECDSA for Signature-Based Auth (Available Now)**
+```motoko
+// For APIs using signature-based auth (AWS Signature v4, etc.)
+public func signApiRequest(message : Blob) : async Blob {
+    Cycles.add(10_000_000_000);
+    let { signature } = await ic.sign_with_ecdsa({
+        message_hash = sha256(message);
+        derivation_path = [principal_to_blob(Principal.fromActor(this))];
+        key_id = { curve = #secp256k1; name = "key_1" };
+    });
+    signature
+};
 ```
 
 ## Implementation Details
@@ -203,6 +272,33 @@ public type Config__ = {
 };
 ```
 
+**Updated (Phase 5 - Add Secure Credential Store):**
+```motoko
+public type Config__ = {
+    baseUrl : Text;
+    // Option 1: Direct credentials (backward compatible)
+    accessToken : ?Text;
+    apiKey : ?Text;
+    basicAuthUser : ?Text;
+    basicAuthPassword : ?Text;
+    // Option 2: Secure credential store (vetKeys-based)
+    credentialStore : ?CredentialStore;
+    userId : ?Principal;
+    // HTTP outcall config
+    max_response_bytes : ?Nat64;
+    transform : ?TransformContext__;
+    is_replicated : ?Bool;
+    cycles : Nat;
+};
+
+// Credential store interface for vetKeys integration
+public type CredentialStore = {
+    getToken : (Principal) -> async ?Text;
+    getApiKey : (Principal) -> async ?Text;
+    getBasicAuth : (Principal) -> async ?(Text, Text);
+};
+```
+
 ### 3. Header Building Logic (api.mustache)
 
 **Location:** Lines 130-160 (request header construction in each operation)
@@ -309,10 +405,200 @@ let request : http_request_args = {
 };
 ```
 
+**Phase 5: Secure Credential Store Support**
+```motoko
+{{#usesBearerAuth}}
+// Build authorization header - fetch from secure store if available
+let authHeaders : [http_header] = switch (config.credentialStore, config.userId, config.accessToken) {
+    // Prefer secure credential store
+    case (?store, ?userId, _) {
+        let ?token = await store.getToken(userId) else [];
+        [{ name = "Authorization"; value = "Bearer " # token }]
+    };
+    // Fall back to direct token
+    case (_, _, ?token) {
+        [{ name = "Authorization"; value = "Bearer " # token }]
+    };
+    case _ [];
+};
+{{/usesBearerAuth}}
+```
+
 **Note on Base64:** For Basic Auth, we'll need to add Base64 encoding support. Options:
 1. Use `mo:base/Base64` if available
 2. Implement simple Base64 encoder in template
 3. Document that Basic Auth requires additional dependency
+
+### 4. Secure Credential Store Module (Phase 5)
+
+**New File:** `modules/openapi-generator/src/main/resources/motoko/SecureCredentialStore.mustache`
+
+**vetKeys-based Implementation (when available):**
+```motoko
+// SecureCredentialStore.mo - Encrypted credential storage using vetKeys
+import Map "mo:core/pure/Map";
+import Blob "mo:core/Blob";
+import Text "mo:core/Text";
+import Principal "mo:core/Principal";
+import Error "mo:core/Error";
+import { vetKeys } "ic:vetkeys";  // When vetKeys API is stable
+
+module {
+    public type CredentialType = {
+        #bearerToken;
+        #apiKey;
+        #basicAuth;
+    };
+
+    public class SecureStore() {
+        // Encrypted storage: Principal -> CredentialType -> Encrypted Blob
+        stable var storage : Map<Principal, Map<CredentialType, Blob>> = Map.empty();
+
+        // Store encrypted bearer token
+        public func storeToken(userId : Principal, token : Text) : async () {
+            let derivationPath = credentialTypeToPath(#bearerToken);
+            let encKey = await vetKeys.derive_key({
+                derivation_path = derivationPath;
+                key_id = userId;
+            });
+            let encrypted = encrypt(Text.encodeUtf8(token), encKey);
+
+            let userCreds = switch (Map.get(storage, userId)) {
+                case (?creds) creds;
+                case null Map.empty<CredentialType, Blob>();
+            };
+            let updatedCreds = Map.put(userCreds, #bearerToken, encrypted);
+            storage := Map.put(storage, userId, updatedCreds);
+        };
+
+        // Retrieve and decrypt bearer token
+        public func getToken(userId : Principal) : async ?Text {
+            let ?userCreds = Map.get(storage, userId) else return null;
+            let ?encrypted = Map.get(userCreds, #bearerToken) else return null;
+
+            let derivationPath = credentialTypeToPath(#bearerToken);
+            let decKey = await vetKeys.derive_key({
+                derivation_path = derivationPath;
+                key_id = userId;
+            });
+            let decrypted = decrypt(encrypted, decKey);
+            ?Text.decodeUtf8(decrypted)
+        };
+
+        // Store encrypted API key
+        public func storeApiKey(userId : Principal, apiKey : Text) : async () {
+            let derivationPath = credentialTypeToPath(#apiKey);
+            let encKey = await vetKeys.derive_key({
+                derivation_path = derivationPath;
+                key_id = userId;
+            });
+            let encrypted = encrypt(Text.encodeUtf8(apiKey), encKey);
+
+            let userCreds = switch (Map.get(storage, userId)) {
+                case (?creds) creds;
+                case null Map.empty<CredentialType, Blob>();
+            };
+            let updatedCreds = Map.put(userCreds, #apiKey, encrypted);
+            storage := Map.put(storage, userId, updatedCreds);
+        };
+
+        // Retrieve and decrypt API key
+        public func getApiKey(userId : Principal) : async ?Text {
+            let ?userCreds = Map.get(storage, userId) else return null;
+            let ?encrypted = Map.get(userCreds, #apiKey) else return null;
+
+            let derivationPath = credentialTypeToPath(#apiKey);
+            let decKey = await vetKeys.derive_key({
+                derivation_path = derivationPath;
+                key_id = userId;
+            });
+            let decrypted = decrypt(encrypted, decKey);
+            ?Text.decodeUtf8(decrypted)
+        };
+
+        // Store encrypted Basic Auth credentials
+        public func storeBasicAuth(userId : Principal, username : Text, password : Text) : async () {
+            let credentials = username # ":" # password;
+            let derivationPath = credentialTypeToPath(#basicAuth);
+            let encKey = await vetKeys.derive_key({
+                derivation_path = derivationPath;
+                key_id = userId;
+            });
+            let encrypted = encrypt(Text.encodeUtf8(credentials), encKey);
+
+            let userCreds = switch (Map.get(storage, userId)) {
+                case (?creds) creds;
+                case null Map.empty<CredentialType, Blob>();
+            };
+            let updatedCreds = Map.put(userCreds, #basicAuth, encrypted);
+            storage := Map.put(storage, userId, updatedCreds);
+        };
+
+        // Retrieve and decrypt Basic Auth credentials
+        public func getBasicAuth(userId : Principal) : async ?(Text, Text) {
+            let ?userCreds = Map.get(storage, userId) else return null;
+            let ?encrypted = Map.get(userCreds, #basicAuth) else return null;
+
+            let derivationPath = credentialTypeToPath(#basicAuth);
+            let decKey = await vetKeys.derive_key({
+                derivation_path = derivationPath;
+                key_id = userId;
+            });
+            let decrypted = decrypt(encrypted, decKey);
+            let credentials = Text.decodeUtf8(decrypted);
+
+            // Parse "username:password"
+            let parts = Text.split(credentials, #char ':');
+            switch (parts.next(), parts.next()) {
+                case (?user, ?pass) ?(user, pass);
+                case _ null;
+            }
+        };
+
+        // Helper: Convert credential type to derivation path
+        func credentialTypeToPath(credType : CredentialType) : Blob {
+            switch (credType) {
+                case (#bearerToken) Blob.fromArray([0x00, 0x00, 0x00, 0x01]);
+                case (#apiKey) Blob.fromArray([0x00, 0x00, 0x00, 0x02]);
+                case (#basicAuth) Blob.fromArray([0x00, 0x00, 0x00, 0x03]);
+            }
+        };
+
+        // Note: encrypt/decrypt functions would use AES-GCM or similar
+        // Implementation depends on available crypto libraries
+    };
+};
+```
+
+**Simplified Pattern (Available Now - Frontend Encryption):**
+```motoko
+// SecureCredentialStore.mo - Frontend-encrypted storage
+import Map "mo:core/pure/Map";
+import Blob "mo:core/Blob";
+import Principal "mo:core/Principal";
+
+module {
+    public class SecureStore() {
+        // Encrypted storage: Principal -> CredentialType -> Encrypted Blob
+        // User encrypts in frontend, canister only stores encrypted data
+        stable var storage : Map<Principal, Map<Text, Blob>> = Map.empty();
+
+        public func storeEncrypted(userId : Principal, credType : Text, encrypted : Blob) : () {
+            let userCreds = switch (Map.get(storage, userId)) {
+                case (?creds) creds;
+                case null Map.empty<Text, Blob>();
+            };
+            let updatedCreds = Map.put(userCreds, credType, encrypted);
+            storage := Map.put(storage, userId, updatedCreds);
+        };
+
+        public query func getEncrypted(userId : Principal, credType : Text) : ?Blob {
+            let ?userCreds = Map.get(storage, userId) else return null;
+            Map.get(userCreds, credType)
+        };
+    };
+};
+```
 
 ## Testing Strategy
 
@@ -611,6 +897,54 @@ public func testBasicAuth() : async Bool {
 };
 ```
 
+### Phase 5 Tests: Secure Credential Storage
+
+**Test vetKeys-based credential management:**
+```motoko
+import { SecureStore } "../SecureCredentialStore";
+
+persistent actor {
+    let credStore = SecureStore();
+
+    // Test: Store and retrieve encrypted bearer token
+    public shared(msg) func testSecureTokenStorage() : async Bool {
+        let caller = msg.caller;
+        let testToken = "secure-test-token-12345";
+
+        // Store encrypted
+        await credStore.storeToken(caller, testToken);
+
+        // Retrieve and verify
+        let ?retrieved = await credStore.getToken(caller) else return false;
+        retrieved == testToken
+    };
+
+    // Test: Use secure store with API client
+    public shared(msg) func testSecureApiCall() : async Bool {
+        let caller = msg.caller;
+
+        // Setup: Store token
+        await credStore.storeToken(caller, "test-token-from-store");
+
+        // Create API client with secure store
+        let api = DefaultApi({
+            baseUrl = "https://httpbin.org";
+            accessToken = null;  // Not used - will fetch from store
+            credentialStore = ?credStore;
+            userId = ?caller;
+            // ...
+        });
+
+        try {
+            let response = await* api.testBearer();
+            response.authenticated and response.token == "test-token-from-store"
+        } catch (e) {
+            false
+        }
+    };
+};
+```
+
 ## CI Integration
 
 ### GitHub Actions Workflow
@@ -710,6 +1044,17 @@ jobs:
    - CI workflow for automated testing
    - Runs on every change to Motoko templates or codegen
 
+### Phase 5 Files (Secure Credential Storage)
+
+7. **modules/openapi-generator/src/main/resources/motoko/SecureCredentialStore.mustache**
+   - vetKeys-based encrypted credential storage
+   - Per-principal isolation with threshold cryptography
+   - Support for bearer tokens, API keys, basic auth
+
+8. **samples/client/httpbin-auth/motoko-secure/src/main.mo**
+   - Test canister demonstrating secure credential storage
+   - Integration tests for vetKeys-based auth
+
 ## Implementation Phases
 
 ### Phase 1: Bearer Token (Week 1)
@@ -765,6 +1110,41 @@ jobs:
 - [ ] Handle edge cases (missing credentials, multiple schemes)
 - [ ] Performance testing with authenticated requests
 
+### Phase 5: Secure Credential Management (Week 5-6)
+
+**Phase 5A: Prepare for vetKeys (Immediate)**
+- [ ] Design CredentialStore interface for backward compatibility
+- [ ] Implement frontend-encrypted storage pattern (available now)
+- [ ] Add optional credentialStore/userId fields to Config__
+- [ ] Update template to support both direct and store-based auth
+- [ ] Create SecureCredentialStore.mustache template (frontend encryption)
+- [ ] Document secure storage patterns in /generate skill
+
+**Phase 5B: Integrate vetKeys (When Available)**
+- [ ] Monitor vetKeys API stability and production readiness
+- [ ] Update SecureCredentialStore to use vetKeys threshold derivation
+- [ ] Implement encrypt/decrypt using AES-GCM with derived keys
+- [ ] Add per-credential-type derivation paths
+- [ ] Test with vetKeys devnet/testnet
+- [ ] Create comprehensive integration tests
+- [ ] Benchmark performance (key derivation overhead)
+
+**Phase 5C: Advanced Features (Optional)**
+- [ ] Threshold ECDSA support for signature-based auth (AWS Sig v4)
+- [ ] Multi-user credential sharing with access control
+- [ ] Credential rotation and expiry management
+- [ ] Audit logging for credential access
+- [ ] Migration tools from direct to secure storage
+
+**Success Criteria:**
+- ✅ Frontend-encrypted storage works today (Phase 5A)
+- ✅ Backward compatible - direct credentials still work
+- ✅ CredentialStore interface ready for vetKeys
+- ✅ When vetKeys available: threshold derivation works
+- ✅ No single node sees plaintext credentials
+- ✅ Per-principal credential isolation
+- ✅ All auth tests pass with secure storage
+
 ## Verification Steps
 
 ### Manual Testing
@@ -785,6 +1165,14 @@ jobs:
 2. Create test with real Spotify API token (manual, not CI)
 3. Verify authenticated requests work
 4. Document usage in skill
+
+### Phase 5 Testing (Secure Storage)
+1. Test frontend-encrypted storage (available now)
+2. Verify per-principal isolation
+3. Test credential retrieval and usage
+4. When vetKeys available: Test threshold key derivation
+5. Verify encryption/decryption correctness
+6. Performance benchmark: Measure key derivation overhead
 
 ## Success Criteria
 
@@ -813,6 +1201,13 @@ jobs:
 - README shows auth configuration
 - Sample configs demonstrate usage
 
+✅ **Secure credential management ready (Phase 5)**
+- Frontend-encrypted storage available today
+- CredentialStore interface designed for vetKeys
+- Per-principal credential isolation
+- Backward compatible with direct credentials
+- When vetKeys available: Threshold cryptography integrated
+
 ## Benefits
 
 1. **Real-world API support**: Generated clients work with Spotify, GitHub, OpenAI, etc.
@@ -821,6 +1216,10 @@ jobs:
 4. **Multiple auth types**: Covers 95% of OpenAPI auth patterns
 5. **Type-safe**: Motoko compiler verifies all auth code
 6. **Production-ready**: Tests use real HTTP outcalls, same as production
+7. **Secure credential storage**: IC Chain-Key cryptography protects API keys
+8. **No single point of failure**: Threshold cryptography distributes trust
+9. **Per-user isolation**: Each user's credentials independently encrypted
+10. **Future-proof**: Ready for vetKeys when available
 
 ## Future Enhancements
 
@@ -831,20 +1230,38 @@ jobs:
 
 ### Advanced Auth Patterns
 - Digest authentication
-- AWS Signature v4
+- AWS Signature v4 (using threshold ECDSA)
 - Custom authentication schemes
 - Multiple concurrent auth schemes
+
+### Secure Credential Features
+- Credential rotation and expiry
+- Multi-user credential sharing with permissions
+- Audit logging for credential access
+- Backup and recovery mechanisms
+- Migration tools from plaintext to encrypted storage
 
 ### Developer Experience
 - Auth configuration validation at generation time
 - Better error messages for auth failures
 - Auth middleware/interceptors pattern
+- Interactive credential setup CLI
 
 ## Related Work
 
 - **HTTP Response Code Processing**: Already implemented and working
 - **Enum/Janus Types**: Enables proper auth response model handling
 - **Error handling**: 401/403 responses properly parsed as errors
+- **vetKeys**: IC Chain-Key cryptography for secure credential storage
+
+## References
+
+- [vetKeys Introduction](https://internetcomputer.org/docs/building-apps/network-features/vetkeys/introduction)
+- [vetKeys API](https://internetcomputer.org/docs/building-apps/network-features/vetkeys/api)
+- [Encrypted onchain storage](https://internetcomputer.org/docs/building-apps/network-features/vetkeys/encrypted-onchain-storage)
+- [Threshold ECDSA](https://internetcomputer.org/docs/building-apps/network-features/vetkeys/bls-signatures)
+- [Security best practices: Data storage](https://internetcomputer.org/docs/building-apps/security/data-storage)
+- [ICP management canister](https://internetcomputer.org/docs/references/system-canisters/management-canister)
 
 ## Notes
 
@@ -852,3 +1269,6 @@ jobs:
 - Bearer tokens in tests are dummy values; real tokens should never be committed
 - Basic Auth Base64 encoding can use standard Motoko libraries or custom implementation
 - Security context is per-operation in OpenAPI; global security is more common
+- **Phase 5 can start immediately** with frontend-encrypted storage pattern
+- vetKeys integration is additive - won't break existing direct credential usage
+- Threshold key derivation adds latency (~100-200ms); acceptable for setup operations
