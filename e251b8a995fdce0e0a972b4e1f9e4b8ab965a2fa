@@ -114,7 +114,7 @@ public shared query(msg) func getEncryptedToken() : async ?Blob {
 };
 ```
 
-**Option B: vetKeys Pattern (Future - When Available)**
+**Option B: vetKeys Pattern (Future - Available Now - Production Ready)**
 ```motoko
 import { vetKeys } "ic:vetkeys";
 
@@ -1120,8 +1120,8 @@ jobs:
 - [ ] Create SecureCredentialStore.mustache template (frontend encryption)
 - [ ] Document secure storage patterns in /generate skill
 
-**Phase 5B: Integrate vetKeys (When Available)**
-- [ ] Monitor vetKeys API stability and production readiness
+**Phase 5B: Integrate vetKeys (Available Now - Production Ready)**
+- [ ] Use production vetKD API from management canister (aaaaa-aa)
 - [ ] Update SecureCredentialStore to use vetKeys threshold derivation
 - [ ] Implement encrypt/decrypt using AES-GCM with derived keys
 - [ ] Add per-credential-type derivation paths
